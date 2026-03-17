@@ -2,8 +2,7 @@
 Mô-đun Quản lý cấu hình Web API
 Hỗ trợ thêm, sửa, xóa, kiểm tra giao diện API qua Web UI
 
-Bản quyền © 2026 Công ty TNHH Công nghệ An ninh mạng Huyễn Thành Tân Cương (Công nghệ Huyễn Thành)
-Tác giả: Huyễn Thành
+
 """
 import json
 from typing import Dict, List, Tuple, Any

@@ -1,8 +1,7 @@
 """
 Mô-đun tạo tiểu thuyết - Hỗ trợ tạo dàn ý, tạo chương, viết lại...
 
-Bản quyền © 2026 Công ty TNHH Công nghệ An ninh mạng Huyễn Thành Tân Cương (Công nghệ Huyễn Thành)
-Tác giả: Huyễn Thành
+
 """
 import re
 import logging

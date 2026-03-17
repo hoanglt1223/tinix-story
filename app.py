@@ -1,9 +1,6 @@
 """
-AI Novel Generator 4.5 - Ứng dụng chính
+TiniX Story 1.0 - Ứng dụng chính
 Tích hợp hệ thống sinh tiểu thuyết, quản lý dự án, xuất file
-
-Bản quyền © 2026 Công ty TNHH Công nghệ An ninh mạng Huyễn Thành Tân Cương (Công nghệ Huyễn Thành)
-Tác giả: Huyễn Thành
 """
 
 import gradio as gr
@@ -38,7 +35,7 @@ from core.logger import get_logger
 
 logger = get_logger("app")
 logger.info("=" * 60)
-logger.info("AI Novel Generator 4.5 - Hệ thống log đã khởi tạo")
+logger.info("TiniX Story 1.0 - Hệ thống log đã khởi tạo")
 logger.info("=" * 60)
 
 # Cấu hình biến môi trường
@@ -92,9 +89,8 @@ def create_main_ui():
         # Footer
         gr.Markdown("""
         <div style="text-align: center; padding: 15px; margin-top: 30px; border-top: 1px solid #e0e0e0; color: #666;">
-            <p style="margin: 5px 0;">AI Novel Generator v4.5.0</p>
-            <p style="margin: 5px 0; font-size: 0.9em;">Bản quyền © 2026 Công ty TNHH Công nghệ An ninh mạng Huyễn Thành Tân Cương</p>
-            <p style="margin: 5px 0; font-size: 0.8em; color: #999;">Made with ❤️ by Huyễn Thành</p>
+            <p style="margin: 5px 0;">TiniX Story v1.0.0</p>
+            <p style="margin: 5px 0; font-size: 0.8em; color: #999;">Made with ❤️ by TiniX AI</p>
         </div>
         """)
 

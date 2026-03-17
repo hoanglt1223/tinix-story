@@ -1,45 +1,45 @@
-# AI 小说创作工具 Dockerfile
-# 基于 Python 3.11 官方镜像
+# Dockerfile cho công cụ sáng tác tiểu thuyết AI
+# Dựa trên image chính thức của Python 3.11
 FROM python:3.11-slim
 
-# 设置工作目录
+# Thiết lập thư mục làm việc
 WORKDIR /app
 
-# 设置环境变量
+# Thiết lập biến môi trường
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONPATH=/app
 
-# 安装系统依赖
+# Cài đặt các dependencies hệ thống
 RUN apt-get update && apt-get install -y \
     build-essential \
     curl \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# 复制依赖文件
+# Sao chép tệp dependencies
 COPY requirements.txt .
 COPY requirements-dev.txt .
 
-# 安装 Python 依赖
+# Cài đặt dependencies Python
 RUN pip install --no-cache-dir -r requirements.txt
 RUN pip install --no-cache-dir -r requirements-dev.txt
 
-# 创建必要的目录
+# Tạo các thư mục cần thiết
 RUN mkdir -p logs cache output data backups templates project_templates plugins
 
-# 复制应用代码
+# Sao chép mã nguồn ứng dụng
 COPY . .
 
-# 设置权限
+# Thiết lập quyền truy cập
 RUN chmod +x start.sh start.bat run.py
 
-# 暴露端口
+# Expose port
 EXPOSE 8000
 
-# 健康检查
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-# 设置启动命令
+# Lệnh khởi động
 CMD ["python", "run.py"]

@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # AI 小说创作工具主服务
+  # Dịch vụ chính của công cụ sáng tác tiểu thuyết AI
   novel-generator:
     build:
       context: .
@@ -12,43 +12,43 @@ services:
     ports:
       - "8000:8000"
     environment:
-      # 基础配置
+      # Cấu hình cơ bản
       - MODE=production
       - HOST=0.0.0.0
       - PORT=8000
       - CONCURRENCY=4
       
-      # 日志配置
+      # Cấu hình log
       - LOG_LEVEL=INFO
       - LOG_FILE=logs/novel_generator.log
       - CONSOLE_OUTPUT=true
       
-      # 数据库配置
+      # Cấu hình cơ sở dữ liệu
       - DB_TYPE=sqlite
       - DB_PATH=data/novel_generator.db
       
-      # 缓存配置
+      # Cấu hình cache
       - CACHE_ENABLED=true
       - CACHE_TYPE=file
       - CACHE_LOCATION=cache
       - CACHE_TTL=3600
       
-      # 安全配置
+      # Cấu hình bảo mật
       - ENABLE_CORS=true
       - ALLOWED_ORIGINS=*
       
-      # API 配置
+      # Cấu hình API
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GLM_API_KEY=${GLM_API_KEY}
       - CLAUDE_API_KEY=${CLAUDE_API_KEY}
       
-      # 生成参数
+      # Tham số tạo
       - TEMPERATURE=0.7
       - TOP_P=0.9
       - MAX_TOKENS=4000
       
     volumes:
-      # 数据持久化
+      # Lưu trữ dữ liệu
       - ./data:/app/data
       - ./cache:/app/cache
       - ./logs:/app/logs
@@ -58,7 +58,7 @@ services:
       - ./project_templates:/app/project_templates
       - ./plugins:/app/plugins
       
-    # 健康检查
+    # Kiểm tra sức khỏe (Health check)
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -66,7 +66,7 @@ services:
       retries: 3
       start_period: 40s
       
-    # 资源限制
+    # Giới hạn tài nguyên
     deploy:
       resources:
         limits:
@@ -76,7 +76,7 @@ services:
           memory: 512M
           cpus: '0.25'
 
-  # Redis 缓存服务（可选）
+  # Dịch vụ cache Redis (Tùy chọn)
   redis:
     image: redis:7-alpine
     container_name: ai-novel-redis
@@ -94,7 +94,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # Nginx 反向代理（可选）
+  # Reverse proxy Nginx (Tùy chọn)
   nginx:
     image: nginx:alpine
     container_name: ai-novel-nginx
@@ -113,7 +113,7 @@ services:
       timeout: 10s
       retries: 3
 
-  # 数据库备份服务（可选）
+  # Dịch vụ sao lưu cơ sở dữ liệu (Tùy chọn)
   db-backup:
     image: alpine:latest
     container_name: ai-novel-db-backup
@@ -128,7 +128,7 @@ services:
       while true; do
         echo "Starting database backup..."
         curl -X POST http://novel-generator:8000/api/backup
-        sleep 86400  # 每天备份一次
+        sleep 86400  # Sao lưu mỗi ngày một lần
       done
 
 volumes:

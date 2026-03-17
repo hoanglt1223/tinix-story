@@ -1,8 +1,7 @@
 """
 Mô-đun Quản lý dự án - Hỗ trợ lưu, tải, xuất dự án
 
-Bản quyền © 2026 Công ty TNHH Công nghệ An ninh mạng Huyễn Thành Tân Cương (Công nghệ Huyễn Thành)
-Tác giả: Huyễn Thành
+
 """
 import json
 import os

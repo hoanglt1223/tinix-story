@@ -1,8 +1,7 @@
 """
 Mô-đun phân tích tệp - Hỗ trợ txt/pdf/epub, có theo dõi tiến trình và xử lý lỗi, hỗ trợ mẫu chương tùy chỉnh
 
-Bản quyền © 2026 Công ty TNHH Công nghệ An ninh mạng Huyễn Thành Tân Cương (Công nghệ Huyễn Thành)
-Tác giả: Huyễn Thành
+
 """
 import os
 import re
