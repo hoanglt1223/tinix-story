@@ -1524,12 +1524,7 @@ def get_summary_cache_size() -> int:
 # ===================== Phát hiện & lấp đầy khoảng trống chương ======================
 
 def detect_gaps(project_id: str) -> List[Dict]:
-    """
-    Tìm các chương trống hoặc quá ngắn (word_count < 100).
-
-    Returns:
-        Danh sách dict {num, title, desc, word_count}
-    """
+    """Tìm các chương trống hoặc quá ngắn (word_count < 100)."""
     if not project_id:
         return []
     try:
@@ -1549,14 +1544,8 @@ def detect_gaps(project_id: str) -> List[Dict]:
 def fill_chapter_gap(project_id: str, chapter_num: int, novel_title: str = "",
                      character_setting: str = "", world_setting: str = "",
                      plot_idea: str = "", genre: str = "") -> Tuple[str, str]:
-    """
-    Tạo nội dung cho chương bị thiếu, lưu vào DB.
-
-    Returns:
-        (nội dung, thông báo)
-    """
+    """Tạo nội dung cho chương bị thiếu, lưu vào DB."""
     conn = get_db()
-    # Lấy context 2 chương trước
     prev_rows = conn.execute(
         """SELECT content FROM chapters
            WHERE project_id = ? AND num < ? AND content != '' AND content IS NOT NULL
@@ -1564,30 +1553,21 @@ def fill_chapter_gap(project_id: str, chapter_num: int, novel_title: str = "",
         (project_id, chapter_num)
     ).fetchall()
     previous_content = "\n\n".join(r["content"] for r in reversed(prev_rows))[-3000:]
-
-    # Lấy thông tin chương cần tạo
     ch_row = conn.execute(
         "SELECT title, desc FROM chapters WHERE project_id = ? AND num = ?",
         (project_id, chapter_num)
     ).fetchone()
     if not ch_row:
         return "", t("gap_filler.chapter_not_found")
-
     gen = get_generator()
     content, msg = gen.generate_chapter(
-        chapter_num=chapter_num,
-        chapter_title=ch_row["title"],
-        chapter_desc=ch_row["desc"],
-        novel_title=novel_title,
-        character_setting=character_setting,
-        world_setting=world_setting,
-        plot_idea=plot_idea,
-        genre=genre,
-        previous_content=previous_content,
+        chapter_num=chapter_num, chapter_title=ch_row["title"],
+        chapter_desc=ch_row["desc"], novel_title=novel_title,
+        character_setting=character_setting, world_setting=world_setting,
+        plot_idea=plot_idea, genre=genre, previous_content=previous_content,
     )
     if not content:
         return "", msg
-
     now = datetime.now().isoformat()
     conn.execute(
         """UPDATE chapters SET content = ?, word_count = ?, generated_at = ?
@@ -1595,31 +1575,81 @@ def fill_chapter_gap(project_id: str, chapter_num: int, novel_title: str = "",
         (content, len(content), now, project_id, chapter_num)
     )
     conn.commit()
-    logger.info(f"Đã lấp đầy chương {chapter_num} dự án {project_id}")
     return content, t("gap_filler.fill_success", num=chapter_num)
 
 
 def fill_all_gaps(project_id: str, novel_title: str = "", character_setting: str = "",
                   world_setting: str = "", plot_idea: str = "", genre: str = ""):
-    """
-    Generator lấp đầy tất cả chương trống, yield tiến độ dạng chuỗi.
-    """
+    """Generator lấp đầy tất cả chương trống, yield tiến độ."""
     gaps = detect_gaps(project_id)
     if not gaps:
         yield t("gap_filler.no_gaps")
         return
-
     yield t("gap_filler.found_gaps", count=len(gaps))
     for i, gap in enumerate(gaps, 1):
         yield t("gap_filler.filling", current=i, total=len(gaps), num=gap["num"], title=gap["title"])
         _, msg = fill_chapter_gap(
-            project_id=project_id,
-            chapter_num=gap["num"],
-            novel_title=novel_title,
-            character_setting=character_setting,
-            world_setting=world_setting,
-            plot_idea=plot_idea,
-            genre=genre,
+            project_id=project_id, chapter_num=gap["num"],
+            novel_title=novel_title, character_setting=character_setting,
+            world_setting=world_setting, plot_idea=plot_idea, genre=genre,
         )
         yield msg
     yield t("gap_filler.all_done")
+
+
+# === Outline Editor helpers ===
+
+def get_outline_chapters(project_id: str) -> List[Dict]:
+    """Lấy danh sách chương (num, title, desc) của dự án để hiển thị trong editor"""
+    try:
+        conn = get_db()
+        rows = conn.execute(
+            "SELECT num, title, desc FROM chapters WHERE project_id = ? ORDER BY num",
+            (project_id,)
+        ).fetchall()
+        return [{"num": r["num"], "title": r["title"], "desc": r["desc"]} for r in rows]
+    except Exception as e:
+        logger.error(f"get_outline_chapters failed: {e}")
+        return []
+
+
+def update_chapter_outline(project_id: str, chapter_num: int, title: str, desc: str) -> Tuple[bool, str]:
+    """Cập nhật tiêu đề và mô tả của một chương trong dàn ý"""
+    try:
+        conn = get_db()
+        conn.execute(
+            "UPDATE chapters SET title = ?, desc = ? WHERE project_id = ? AND num = ?",
+            (title, desc, project_id, chapter_num)
+        )
+        conn.commit()
+        return True, "OK"
+    except Exception as e:
+        logger.error(f"update_chapter_outline failed: {e}")
+        return False, str(e)
+
+
+def save_outline_chapters(project_id: str, rows: List[List]) -> Tuple[bool, str]:
+    """Lưu toàn bộ thay đổi từ Dataframe (list of [num, title, desc])."""
+    try:
+        conn = get_db()
+        updated = 0
+        for row in rows:
+            if len(row) < 3:
+                continue
+            num = row[0]
+            title = str(row[1] or "").strip()
+            desc = str(row[2] or "").strip()
+            try:
+                num = int(num)
+            except (TypeError, ValueError):
+                continue
+            conn.execute(
+                "UPDATE chapters SET title = ?, desc = ? WHERE project_id = ? AND num = ?",
+                (title, desc, project_id, num)
+            )
+            updated += 1
+        conn.commit()
+        return True, str(updated)
+    except Exception as e:
+        logger.error(f"save_outline_chapters failed: {e}")
+        return False, str(e)

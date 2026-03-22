@@ -468,6 +468,20 @@ class APIClient:
                     logger.error(f"Invalid/short content, rejecting: len={len(content) if content else 0}")
                     return False, t("api_client.invalid_content", length=len(content) if content else 0)
 
+                # Ghi lại usage token nếu API trả về thông tin
+                try:
+                    if hasattr(response, 'usage') and response.usage:
+                        from services.cost_tracker import CostTracker
+                        CostTracker.log_usage(
+                            project_id=None,
+                            backend_name=backend.name,
+                            model=model or "",
+                            tokens_in=getattr(response.usage, 'prompt_tokens', 0) or 0,
+                            tokens_out=getattr(response.usage, 'completion_tokens', 0) or 0,
+                        )
+                except Exception:
+                    pass  # Không làm gián đoạn quá trình sinh nếu tracking lỗi
+
                 logger.info(f"API call success: {backend.name}")
                 return True, content
 

@@ -5,8 +5,8 @@ import re
 import traceback
 
 from locales.i18n import t
-from services.novel_generator import OutlineParser
-from services.project_manager import ProjectManager
+from services.novel_generator import OutlineParser, get_outline_chapters, save_outline_chapters
+from services.project_manager import ProjectManager, list_project_titles
 from services.genre_manager import GenreManager
 from services.sub_genre_manager import SubGenreManager
 from services.style_manager import StyleManager
@@ -117,6 +117,67 @@ def build_create_tab():
 
             outline_output = gr.Textbox(label=t("create.outline_display"), lines=15, interactive=True)
             outline_status = gr.Textbox(label=t("create.gen_status"), interactive=False)
+
+        with gr.Accordion(f"📋 {t('outline_editor.accordion_label')}", open=False):
+            with gr.Row():
+                outline_editor_project_sel = gr.Dropdown(
+                    choices=list_project_titles(),
+                    label=t("outline_editor.select_project"),
+                    interactive=True, scale=3
+                )
+                outline_editor_refresh_btn = gr.Button(t("outline_editor.refresh_btn"), scale=1)
+            outline_editor_df = gr.Dataframe(
+                headers=[t("outline_editor.col_num"), t("outline_editor.col_title"), t("outline_editor.col_desc")],
+                datatype=["number", "str", "str"],
+                label=t("outline_editor.dataframe_label"),
+                interactive=True,
+                wrap=True
+            )
+            with gr.Row():
+                outline_editor_save_btn = gr.Button(t("outline_editor.save_btn"), variant="primary")
+            outline_editor_status = gr.Textbox(label=t("projects.status_label"), interactive=False)
+
+            # Trạng thái lưu project_id hiện tại
+            outline_editor_project_id = gr.State(value=None)
+
+            def on_outline_editor_select(project_title):
+                if not project_title:
+                    return [], None
+                project_data = ProjectManager.get_project_by_title(project_title)
+                if not project_data:
+                    return [], None
+                project_id = project_data["id"]
+                chapters = get_outline_chapters(project_id)
+                rows = [[c["num"], c["title"], c["desc"]] for c in chapters]
+                return rows, project_id
+
+            def on_outline_editor_save(df_data, project_id):
+                if not project_id:
+                    return t("outline_editor.status_no_project")
+                if df_data is None or len(df_data) == 0:
+                    return t("outline_editor.status_no_data")
+                # df_data từ gr.Dataframe là list of lists
+                rows = df_data if isinstance(df_data, list) else df_data.values.tolist()
+                success, result = save_outline_chapters(project_id, rows)
+                if success:
+                    return t("outline_editor.status_saved", count=result)
+                return t("outline_editor.status_failed", error=result)
+
+            outline_editor_project_sel.change(
+                fn=on_outline_editor_select,
+                inputs=[outline_editor_project_sel],
+                outputs=[outline_editor_df, outline_editor_project_id]
+            )
+            outline_editor_refresh_btn.click(
+                fn=on_outline_editor_select,
+                inputs=[outline_editor_project_sel],
+                outputs=[outline_editor_df, outline_editor_project_id]
+            )
+            outline_editor_save_btn.click(
+                fn=on_outline_editor_save,
+                inputs=[outline_editor_df, outline_editor_project_id],
+                outputs=[outline_editor_status]
+            )
 
         with gr.Accordion("🚀 4. Sáng tác tự động", open=False):
             with gr.Row():
