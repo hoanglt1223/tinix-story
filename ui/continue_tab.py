@@ -224,6 +224,117 @@ def build_continue_tab():
             _, msg = CharacterManager.delete_character(pid, name)
             chars = CharacterManager.list_characters(pid)
             return msg, [[c["name"], c["role"]] for c in chars]
+        with gr.Accordion(t("multi_model.accordion_title"), open=False):
+            mm_enable = gr.Checkbox(label=t("multi_model.enable_label"), value=False)
+            from core.config import get_config as _get_config
+            _backend_names = [b.name for b in _get_config().get_enabled_backends()]
+            mm_backends = gr.CheckboxGroup(
+                choices=_backend_names,
+                label=t("multi_model.backends_label"),
+                value=_backend_names[:2] if len(_backend_names) >= 2 else _backend_names
+            )
+            mm_compare_btn = gr.Button(t("multi_model.compare_btn"), variant="secondary")
+            with gr.Row():
+                mm_result_1 = gr.Textbox(label="—", lines=12, interactive=False, scale=1)
+                mm_result_2 = gr.Textbox(label="—", lines=12, interactive=False, scale=1)
+                mm_result_3 = gr.Textbox(label="—", lines=12, interactive=False, scale=1)
+            mm_select = gr.Radio(choices=[], label=t("multi_model.select_best_label"))
+            mm_save_btn = gr.Button(t("multi_model.save_btn"), variant="primary")
+            mm_status = gr.Textbox(label="", interactive=False)
+
+        def on_mm_compare(project_title, ch_num, ch_title, ch_desc, custom_prompt,
+                          mem_type, mem_chaps, selected_style, enabled, selected_backends):
+            if not enabled:
+                return "—", "—", "—", gr.update(choices=[]), "ℹ️ Bật chế độ so sánh trước"
+            if not app_state.current_project:
+                return "—", "—", "—", gr.update(choices=[]), f"❌ {t('multi_model.no_project')}"
+            if not selected_backends:
+                return "—", "—", "—", gr.update(choices=[]), f"❌ {t('multi_model.no_backends')}"
+
+            gen = app_state.get_generator()
+            if selected_style:
+                gen.config.generation.writing_style = selected_style
+            project = app_state.current_project
+
+            all_past = [ch for ch in project.chapters if ch.num < int(ch_num) and getattr(ch, 'content', None)]
+            mem_ch = int(mem_chaps) if mem_chaps else 3
+            past_chapters = all_past[-mem_ch:] if len(all_past) > mem_ch else all_past
+            prev_content = "\n\n".join(c.content for c in past_chapters)[-4000:] if mem_type == "Toàn văn" else (all_past[-1].content[-1500:] if all_past else "")
+
+            results = gen.generate_chapter_multi(
+                backend_names=selected_backends,
+                chapter_num=int(ch_num), chapter_title=ch_title,
+                chapter_desc=ch_desc, novel_title=project.title,
+                character_setting=project.character_setting,
+                world_setting=project.world_setting,
+                plot_idea=project.plot_idea, genre=project.genre,
+                sub_genres=project.sub_genres,
+                previous_content=prev_content, context_summary="",
+                custom_prompt=custom_prompt
+            )
+
+            names = list(results.keys())
+            vals = [results.get(names[i], "") if i < len(names) else "" for i in range(3)]
+            labels = [t("multi_model.result_label", name=names[i]) if i < len(names) else "—" for i in range(3)]
+            # Trả về content + cập nhật label
+            radio_choices = [names[i] for i in range(min(3, len(names)))]
+            return (
+                gr.update(value=vals[0], label=labels[0]),
+                gr.update(value=vals[1], label=labels[1]),
+                gr.update(value=vals[2], label=labels[2]),
+                gr.update(choices=radio_choices, value=radio_choices[0] if radio_choices else None),
+                t("multi_model.done")
+            )
+
+        def on_mm_save(selected_backend, mm_r1, mm_r2, mm_r3, ch_num, ch_title, ch_desc):
+            if not selected_backend:
+                return f"❌ {t('multi_model.save_no_select')}"
+            if not app_state.current_project:
+                return f"❌ {t('multi_model.save_no_project')}"
+            # Tìm content từ backend được chọn theo thứ tự
+            content = ""
+            for val in [mm_r1, mm_r2, mm_r3]:
+                if val and not val.startswith("❌"):
+                    # Kiểm tra nếu đây là kết quả của backend đã chọn (không có cách khác ngoài so sánh)
+                    content = val
+                    break
+            if not content:
+                return f"❌ {t('multi_model.save_no_select')}"
+
+            project = app_state.current_project
+            from datetime import datetime as _dt
+            from services.novel_generator import Chapter as _Chapter
+            new_ch = _Chapter(
+                num=int(ch_num), title=ch_title, desc=ch_desc,
+                content=content, word_count=len(content),
+                generated_at=_dt.now().isoformat()
+            )
+            found = False
+            for i, ch in enumerate(project.chapters):
+                if ch.num == int(ch_num):
+                    project.chapters[i] = new_ch
+                    found = True
+                    break
+            if not found:
+                project.chapters.append(new_ch)
+                project.chapters.sort(key=lambda x: x.num)
+            from services.project_manager import ProjectManager as _PM
+            _PM.save_project(project)
+            return f"✅ {t('multi_model.save_success', name=selected_backend)}"
+
+        mm_compare_btn.click(
+            fn=on_mm_compare,
+            inputs=[continue_project_selector, continue_chapter_num, continue_chapter_title,
+                    continue_chapter_desc, continue_custom_prompt, memory_type, memory_chapters,
+                    continue_style_dropdown, mm_enable, mm_backends],
+            outputs=[mm_result_1, mm_result_2, mm_result_3, mm_select, mm_status]
+        )
+        mm_save_btn.click(
+            fn=on_mm_save,
+            inputs=[mm_select, mm_result_1, mm_result_2, mm_result_3,
+                    continue_chapter_num, continue_chapter_title, continue_chapter_desc],
+            outputs=[mm_status]
+        )
 
         def on_refresh_continue(current_title):
             titles = list_project_titles()

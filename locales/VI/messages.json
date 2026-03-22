@@ -1110,5 +1110,34 @@
         "col_cost": "Chi phí (USD)",
         "col_calls": "Số lần gọi",
         "no_data": "Chưa có dữ liệu sử dụng."
+    },
+    "multi_model": {
+        "accordion_title": "🔄 So sánh nhiều mô hình",
+        "enable_label": "Bật chế độ so sánh nhiều mô hình",
+        "backends_label": "Chọn các backend để so sánh",
+        "compare_btn": "So sánh",
+        "no_backends": "Không có backend nào khả dụng",
+        "no_project": "Vui lòng tải dự án trước",
+        "comparing": "Đang so sánh với {count} backend...",
+        "done": "So sánh hoàn tất",
+        "result_label": "Kết quả: {name}",
+        "select_best_label": "Chọn kết quả tốt nhất",
+        "save_btn": "Lưu kết quả đã chọn",
+        "save_success": "Đã lưu chương từ backend: {name}",
+        "save_no_select": "Vui lòng chọn một kết quả để lưu",
+        "save_no_project": "Chưa tải dự án"
+    },
+    "version": {
+        "accordion_title": "📜 Lịch sử phiên bản",
+        "dropdown_label": "Chọn phiên bản",
+        "view_btn": "Xem phiên bản",
+        "rollback_btn": "Khôi phục về phiên bản này",
+        "no_versions": "Chưa có phiên bản nào được lưu",
+        "no_chapter": "Vui lòng chọn chương trước",
+        "view_label": "Nội dung phiên bản (chỉ đọc)",
+        "rollback_success": "Đã khôi phục về phiên bản {version}",
+        "rollback_failed": "Khôi phục thất bại: không tìm thấy phiên bản",
+        "status_label": "Trạng thái phiên bản",
+        "version_entry": "v{version} — {words} từ — {date}"
     }
 }

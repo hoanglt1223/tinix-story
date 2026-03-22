@@ -1001,5 +1001,34 @@
         "col_cost": "Cost (USD)",
         "col_calls": "Calls",
         "no_data": "No usage data yet."
+    },
+    "multi_model": {
+        "accordion_title": "🔄 Multi-Model Comparison",
+        "enable_label": "Enable Multi-Model Comparison",
+        "backends_label": "Select Backends to Compare",
+        "compare_btn": "Compare",
+        "no_backends": "No backends available",
+        "no_project": "Please load a project first",
+        "comparing": "Comparing with {count} backends...",
+        "done": "Comparison complete",
+        "result_label": "Result: {name}",
+        "select_best_label": "Select Best Result",
+        "save_btn": "Save Selected",
+        "save_success": "Saved chapter from backend: {name}",
+        "save_no_select": "Please select a result to save",
+        "save_no_project": "No project loaded"
+    },
+    "version": {
+        "accordion_title": "📜 Version History",
+        "dropdown_label": "Select Version",
+        "view_btn": "View Version",
+        "rollback_btn": "Rollback to this Version",
+        "no_versions": "No versions saved yet",
+        "no_chapter": "Please select a chapter first",
+        "view_label": "Version Content (Read-only)",
+        "rollback_success": "Rolled back to version {version}",
+        "rollback_failed": "Rollback failed: version not found",
+        "status_label": "Version Status",
+        "version_entry": "v{version} — {words} words — {date}"
     }
 }
