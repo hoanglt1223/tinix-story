@@ -14,8 +14,13 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 DB_DIR = "data"
+try:
+    os.makedirs(DB_DIR, exist_ok=True)
+except OSError:
+    # Read-only filesystem (Vercel serverless) — use /tmp
+    DB_DIR = os.path.join("/tmp", "data")
+    os.makedirs(DB_DIR, exist_ok=True)
 DB_FILE = os.path.join(DB_DIR, "tinix_story.db")
-os.makedirs(DB_DIR, exist_ok=True)
 
 # Turso cloud env vars
 TURSO_DATABASE_URL = os.getenv("TURSO_DATABASE_URL", "")

@@ -11,7 +11,12 @@ from datetime import datetime
 from typing import Optional
 
 LOG_DIR = "logs"
-os.makedirs(LOG_DIR, exist_ok=True)
+try:
+    os.makedirs(LOG_DIR, exist_ok=True)
+except OSError:
+    # Read-only filesystem (Vercel serverless) — use /tmp
+    LOG_DIR = os.path.join("/tmp", "logs")
+    os.makedirs(LOG_DIR, exist_ok=True)
 
 # Cấu hình tệp nhật ký
 LOG_FILE = os.path.join(LOG_DIR, f"novel_tool_{datetime.now().strftime('%Y%m%d')}.log")

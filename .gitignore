@@ -200,3 +200,5 @@ gradio_cached/
 !HOW_TO_EXPORT.md
 !.env.example
 !.env.template
+.vercel
+.env*.local

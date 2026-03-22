@@ -16,7 +16,11 @@ from locales.i18n import t
 
 MODULE_ROOT = os.path.dirname(os.path.abspath(__file__))
 EXPORT_DIR = os.path.join(MODULE_ROOT, "exports")
-os.makedirs(EXPORT_DIR, exist_ok=True)
+try:
+    os.makedirs(EXPORT_DIR, exist_ok=True)
+except OSError:
+    EXPORT_DIR = os.path.join("/tmp", "exports")
+    os.makedirs(EXPORT_DIR, exist_ok=True)
 
 
 def _sanitize_filename(name: str, max_len: int = 120) -> str:
