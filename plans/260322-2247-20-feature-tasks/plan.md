@@ -1,5 +1,5 @@
 ---
-status: in_progress
+status: complete
 created: 2026-03-22
 scope: 20 feature tasks across 6 phases
 brainstorm: plans/reports/brainstorm-260322-2247-20-feature-tasks.md
@@ -16,11 +16,11 @@ Implement 20 features across AI analysis, import/export, UI/UX, and power tools.
 | Phase | Theme | Tasks | Priority | Key Deliverables |
 |-------|-------|-------|----------|-----------------|
 | [Phase 1](phase-01-foundation.md) ✓ | Foundation & Quick Wins | #11, #5, #4, #14 | P0-P2 | Chapter editor, batch summarizer, style matcher, dark mode |
-| [Phase 2](phase-02-ai-core.md) | AI Core Intelligence | #1, #2, #16 | P0 | Novel analyzer, gap filler, character bible |
-| [Phase 3](phase-03-import-export.md) | Import/Export | #6, #7, #9, #8, #10 | P0-P2 | Smart EPUB import, EPUB/PDF export, archives, bulk import |
-| [Phase 4](phase-04-ux-polish.md) | UX Polish | #15, #12, #13 | P1 | Live streaming, dashboard, chapter management |
-| [Phase 5](phase-05-advanced-tools.md) | Advanced Tools | #3, #17, #19 | P1-P2 | Consistency checker, outline editor, cost tracker |
-| [Phase 6](phase-06-extras.md) | Extras | #18, #20 | P2 | Multi-model comparison, version history |
+| [Phase 2](phase-02-ai-core.md) ✓ | AI Core Intelligence | #1, #2, #16 | P0 | Novel analyzer, gap filler, character bible |
+| [Phase 3](phase-03-import-export.md) ✓ | Import/Export | #6, #7, #9, #8, #10 | P0-P2 | Smart EPUB import, EPUB/PDF export, archives, bulk import |
+| [Phase 4](phase-04-ux-polish.md) ✓ | UX Polish | #15, #12, #13 | P1 | Live streaming, dashboard, chapter management |
+| [Phase 5](phase-05-advanced-tools.md) ✓ | Advanced Tools | #3, #17, #19 | P1-P2 | Consistency checker, outline editor, cost tracker |
+| [Phase 6](phase-06-extras.md) ✓ | Extras | #18, #20 | P2 | Multi-model comparison, version history |
 
 ## DB Migration Summary
 New tables needed across phases:
