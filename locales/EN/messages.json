@@ -165,6 +165,8 @@
         "export_format_txt": "Text (.txt)",
         "export_format_md": "Markdown (.md)",
         "export_format_html": "HTML (.html)",
+        "export_format_epub": "EPUB (.epub)",
+        "export_format_pdf": "PDF (.pdf)",
         "export_progress_btn": "📥 Export Current Progress",
         "download_file": "Download File",
         "export_status": "Export Status",
@@ -658,7 +660,9 @@
         "generated_date": "Generated date: {date}",
         "first_chapter": "Chapter 1",
         "body_font": "Arial",
-        "title_font": "Arial Black"
+        "title_font": "Arial Black",
+        "missing_ebooklib": "ebooklib not installed. Run: pip install ebooklib",
+        "missing_weasyprint": "weasyprint not installed. Run: pip install weasyprint"
     },
     "config_api": {
         "name_required": "Name is required",
@@ -701,7 +705,9 @@
         "export_success": "Exported to: {filepath}",
         "export_failed": "Export failed: {error}",
         "chapter_not_found": "Chapter not found",
-        "chapter_update_success": "Chapter updated successfully"
+        "chapter_update_success": "Chapter updated successfully",
+        "import_success": "Project '{title}' imported ({count} chapters)",
+        "import_failed": "Import failed: {error}"
     },
     "ui": {
         "col_project_name": "Project Name",
@@ -827,7 +833,8 @@
         "word_count_positive": "Word count must be >0",
         "invalid_regex": "Invalid regex: {error}",
         "file_not_exist": "File not found: {path}",
-        "upload_read_failed": "Upload read failed: {error}"
+        "upload_read_failed": "Upload read failed: {error}",
+        "epub_structured_complete": "EPUB parsed: {count} chapters from '{title}'"
     },
     "config": {
         "backend_name_empty": "Backend name empty",
@@ -857,5 +864,53 @@
         "config_file_missing": "Config missing: {path}",
         "config_format_unsupported": "Format unsupported: {ext}",
         "default_backend_name": "Local Ollama"
+    },
+    "epub_import": {
+        "header": "Import EPUB",
+        "description": "Import an EPUB file as a new project. Chapters will be detected automatically from the table of contents.",
+        "upload_label": "Upload EPUB File (.epub)",
+        "genre_label": "Genre (Optional)",
+        "genre_placeholder": "E.g., Eastern Fantasy, Romance...",
+        "import_btn": "Import EPUB",
+        "preview_label": "Detected Chapters Preview",
+        "status_label": "Import Status",
+        "no_file": "Please upload an EPUB file",
+        "detected_title": "Title",
+        "detected_author": "Author",
+        "detected_chapters": "Chapters",
+        "import_failed": "Import failed: {error}"
+    },
+    "archive": {
+        "header": "Project Archives",
+        "description": "Export a project as a ZIP archive for backup or sharing. Import a previously exported archive to restore a project.",
+        "select_project": "Select Project to Archive",
+        "export_btn": "Export Archive (.zip)",
+        "export_status": "Export Status",
+        "download_label": "Download Archive",
+        "import_label": "Import Archive (.zip)",
+        "import_btn": "Import Archive",
+        "import_status": "Import Status",
+        "no_file": "Please upload a ZIP archive file",
+        "project_not_found": "Project not found: {id}",
+        "export_success": "Archive exported: {filename} ({count} chapters)",
+        "export_failed": "Archive export failed: {error}",
+        "import_success": "Project '{title}' imported successfully ({count} chapters)",
+        "import_failed": "Import failed: {error}",
+        "file_not_found": "File not found: {path}",
+        "invalid_archive": "Invalid archive: missing metadata.json"
+    },
+    "bulk_import": {
+        "header": "Bulk Import",
+        "description": "Import multiple files at once. Each file can become a separate project, or all files can be merged into one project.",
+        "upload_label": "Upload Files (txt/epub/pdf/md/docx)",
+        "mode_label": "Import Mode",
+        "mode_separate": "Each file = separate project",
+        "mode_merge": "Merge all files into one project",
+        "merge_title_label": "Merged Project Title",
+        "merge_title_placeholder": "Enter title for the merged project",
+        "import_btn": "Import Files",
+        "status_label": "Import Results",
+        "no_files": "Please upload at least one file",
+        "import_failed": "Import failed: {error}"
     }
 }

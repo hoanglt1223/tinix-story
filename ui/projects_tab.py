@@ -143,6 +143,63 @@ def build_projects_tab():
                 outputs=[editor_status]
             )
 
+        # === Project Archives Section ===
+        with gr.Accordion(f"📦 {t('archive.header')}", open=False):
+            gr.Markdown(t("archive.description"))
+            with gr.Row():
+                archive_project_selector = gr.Dropdown(
+                    choices=list_project_titles(),
+                    label=t("archive.select_project"),
+                    interactive=True, scale=3
+                )
+                archive_export_btn = gr.Button(t("archive.export_btn"), variant="primary", scale=1)
+            archive_export_status = gr.Textbox(label=t("archive.export_status"), interactive=False)
+            archive_export_download = gr.File(label=t("archive.download_label"), interactive=False)
+
+            gr.Markdown("---")
+            archive_import_file = gr.File(label=t("archive.import_label"), file_types=[".zip"])
+            archive_import_btn = gr.Button(t("archive.import_btn"), variant="secondary")
+            archive_import_status = gr.Textbox(label=t("archive.import_status"), interactive=False)
+
+            def on_archive_export(project_title):
+                if not project_title:
+                    return f"❌ {t('projects.select_project_first')}", None
+                try:
+                    project_data = ProjectManager.get_project_by_title(project_title)
+                    if not project_data:
+                        return f"❌ {t('projects.project_not_found')}", None
+                    from utils.archive_manager import export_project_archive
+                    filepath, msg = export_project_archive(project_data["id"])
+                    if filepath:
+                        return f"✅ {msg}", filepath
+                    return f"❌ {msg}", None
+                except Exception as e:
+                    logger.error(f"Archive export failed: {e}")
+                    return f"❌ {str(e)}", None
+
+            def on_archive_import(zip_file):
+                if not zip_file:
+                    return f"❌ {t('archive.no_file')}"
+                try:
+                    from utils.archive_manager import import_project_archive
+                    file_path = zip_file.name if hasattr(zip_file, 'name') else zip_file
+                    success, msg = import_project_archive(file_path)
+                    return f"✅ {msg}" if success else f"❌ {msg}"
+                except Exception as e:
+                    logger.error(f"Archive import failed: {e}")
+                    return f"❌ {str(e)}"
+
+            archive_export_btn.click(
+                fn=on_archive_export,
+                inputs=[archive_project_selector],
+                outputs=[archive_export_status, archive_export_download]
+            )
+            archive_import_btn.click(
+                fn=on_archive_import,
+                inputs=[archive_import_file],
+                outputs=[archive_import_status]
+            )
+
         refresh_projects_btn.click(fn=on_refresh_projects, outputs=[projects_table, delete_project_selector])
         delete_project_btn.click(
             fn=on_delete_project,
