@@ -109,16 +109,16 @@ def create_main_ui():
 
 # ==================== Khởi động ứng dụng ====================
 
+# Module-level app instance (required by Vercel/ASGI deployments)
+app = create_main_ui()
+app.queue(default_concurrency_limit=10)
+
+
 def main():
-    """Khởi động ứng dụng"""
+    """Khởi động ứng dụng (local/Docker)"""
     logger.info(t("app.startup_log"))
-
-    # Tạo UI
-    app = create_main_ui()
-
-    # Khởi động
     logger.info(t("app.gradio_start", port=WEB_PORT))
-    app.queue(default_concurrency_limit=10).launch(
+    app.launch(
         server_name=WEB_HOST,
         server_port=WEB_PORT,
         share=WEB_SHARE,
