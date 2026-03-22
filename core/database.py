@@ -1,9 +1,9 @@
 """
-Module quản lý cơ sở dữ liệu SQLite - Lưu trữ tập trung
-
-
+Module quản lý cơ sở dữ liệu - Hỗ trợ SQLite local và Turso cloud
+Sử dụng libsql SDK, tương thích SQLite syntax.
+Nếu TURSO_DATABASE_URL được set → kết nối Turso cloud
+Nếu không → dùng SQLite file local (dev mode)
 """
-import sqlite3
 import json
 import os
 import logging
@@ -17,109 +17,242 @@ DB_DIR = "data"
 DB_FILE = os.path.join(DB_DIR, "tinix_story.db")
 os.makedirs(DB_DIR, exist_ok=True)
 
-_connection: Optional[sqlite3.Connection] = None
+# Turso cloud env vars
+TURSO_DATABASE_URL = os.getenv("TURSO_DATABASE_URL", "")
+TURSO_AUTH_TOKEN = os.getenv("TURSO_AUTH_TOKEN", "")
+
+_connection = None
 
 
-def get_db() -> sqlite3.Connection:
-    """Lấy kết nối DB singleton (WAL mode, foreign keys ON)"""
+class DictRow:
+    """Wrapper giúp truy cập row theo tên cột như sqlite3.Row"""
+    def __init__(self, cursor_description, row_data):
+        self._keys = [desc[0] for desc in cursor_description] if cursor_description else []
+        self._data = row_data if row_data else ()
+
+    def __getitem__(self, key):
+        if isinstance(key, str):
+            try:
+                idx = self._keys.index(key)
+                return self._data[idx]
+            except (ValueError, IndexError):
+                raise KeyError(key)
+        return self._data[key]
+
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except (KeyError, IndexError):
+            return default
+
+    def keys(self):
+        return self._keys
+
+
+class DictCursor:
+    """Cursor wrapper trả về DictRow thay vì tuple"""
+    def __init__(self, real_cursor):
+        self._cursor = real_cursor
+
+    @property
+    def description(self):
+        return self._cursor.description
+
+    @property
+    def rowcount(self):
+        return self._cursor.rowcount
+
+    @property
+    def lastrowid(self):
+        return self._cursor.lastrowid
+
+    def execute(self, sql, params=None):
+        if params:
+            self._cursor.execute(sql, params)
+        else:
+            self._cursor.execute(sql)
+        return self
+
+    def fetchone(self):
+        row = self._cursor.fetchone()
+        if row is None:
+            return None
+        return DictRow(self._cursor.description, row)
+
+    def fetchall(self):
+        rows = self._cursor.fetchall()
+        desc = self._cursor.description
+        return [DictRow(desc, r) for r in rows]
+
+    def fetchmany(self, size=None):
+        rows = self._cursor.fetchmany(size) if size else self._cursor.fetchmany()
+        desc = self._cursor.description
+        return [DictRow(desc, r) for r in rows]
+
+    def close(self):
+        self._cursor.close()
+
+
+class ConnectionWrapper:
+    """
+    Wrapper cho kết nối DB, cung cấp API tương thích sqlite3.
+    Tự động wrap cursor để trả về DictRow.
+    """
+    def __init__(self, real_conn):
+        self._conn = real_conn
+
+    def execute(self, sql, params=None):
+        cursor = self._conn.cursor()
+        if params:
+            cursor.execute(sql, params)
+        else:
+            cursor.execute(sql)
+        return DictCursor(cursor)
+
+    def cursor(self):
+        return DictCursor(self._conn.cursor())
+
+    def commit(self):
+        self._conn.commit()
+
+    def close(self):
+        self._conn.close()
+
+    def sync(self):
+        """Sync embedded replica với Turso cloud (no-op cho local SQLite)"""
+        if hasattr(self._conn, 'sync'):
+            self._conn.sync()
+
+
+def _create_connection():
+    """Tạo kết nối DB dựa trên env vars"""
+    import libsql_experimental as libsql
+
+    if TURSO_DATABASE_URL and TURSO_AUTH_TOKEN:
+        # Turso cloud với embedded replica (local cache + cloud sync)
+        logger.info(f"Connecting to Turso: {TURSO_DATABASE_URL[:40]}...")
+        conn = libsql.connect(
+            f"file:{DB_FILE}",
+            sync_url=TURSO_DATABASE_URL,
+            auth_token=TURSO_AUTH_TOKEN,
+        )
+        conn.sync()
+        logger.info("Turso embedded replica connected and synced")
+    elif TURSO_DATABASE_URL:
+        # Turso cloud only (không có local replica)
+        logger.info(f"Connecting to Turso (remote only): {TURSO_DATABASE_URL[:40]}...")
+        conn = libsql.connect(
+            TURSO_DATABASE_URL,
+            auth_token=TURSO_AUTH_TOKEN or "",
+        )
+        logger.info("Turso remote connected")
+    else:
+        # Local SQLite file (dev mode)
+        logger.info(f"Connecting to local SQLite: {DB_FILE}")
+        conn = libsql.connect(f"file:{DB_FILE}")
+        logger.info("Local SQLite connected")
+
+    return conn
+
+
+def get_db() -> ConnectionWrapper:
+    """Lấy kết nối DB singleton"""
     global _connection
     if _connection is None:
-        _connection = sqlite3.connect(DB_FILE, check_same_thread=False)
-        _connection.execute("PRAGMA journal_mode=WAL")
+        raw_conn = _create_connection()
+        _connection = ConnectionWrapper(raw_conn)
+        # libsql hỗ trợ PRAGMA tương tự SQLite
         _connection.execute("PRAGMA foreign_keys=ON")
-        _connection.row_factory = sqlite3.Row
         init_db(_connection)
-        logger.info(f"Database connected: {DB_FILE}")
+        logger.info("Database ready")
     return _connection
 
 
-def init_db(conn: Optional[sqlite3.Connection] = None) -> None:
+# === Schema DDL statements (tách riêng vì libsql không hỗ trợ executescript) ===
+_DDL_STATEMENTS = [
+    """CREATE TABLE IF NOT EXISTS config (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )""",
+    """CREATE TABLE IF NOT EXISTS backends (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        type TEXT NOT NULL,
+        base_url TEXT NOT NULL,
+        api_key TEXT NOT NULL DEFAULT '',
+        model TEXT NOT NULL DEFAULT '',
+        enabled INTEGER NOT NULL DEFAULT 1,
+        timeout INTEGER NOT NULL DEFAULT 30,
+        retry_times INTEGER NOT NULL DEFAULT 3,
+        is_default INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )""",
+    """CREATE TABLE IF NOT EXISTS config_backups (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        data TEXT NOT NULL,
+        created_at TEXT NOT NULL
+    )""",
+    """CREATE TABLE IF NOT EXISTS response_cache (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        timestamp TEXT NOT NULL,
+        ttl INTEGER NOT NULL DEFAULT 3600
+    )""",
+    """CREATE TABLE IF NOT EXISTS generation_cache (
+        project_id TEXT PRIMARY KEY,
+        data TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )""",
+    """CREATE TABLE IF NOT EXISTS chapter_summaries (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id TEXT NOT NULL,
+        chapter_num INTEGER NOT NULL,
+        summary TEXT NOT NULL,
+        generated_at TEXT NOT NULL,
+        UNIQUE(project_id, chapter_num)
+    )""",
+    """CREATE TABLE IF NOT EXISTS projects (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        genre TEXT NOT NULL DEFAULT '',
+        sub_genres TEXT NOT NULL DEFAULT '[]',
+        character_setting TEXT NOT NULL DEFAULT '',
+        world_setting TEXT NOT NULL DEFAULT '',
+        plot_idea TEXT NOT NULL DEFAULT '',
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )""",
+    """CREATE TABLE IF NOT EXISTS chapters (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id TEXT NOT NULL,
+        num INTEGER NOT NULL,
+        title TEXT NOT NULL DEFAULT '',
+        desc TEXT NOT NULL DEFAULT '',
+        content TEXT NOT NULL DEFAULT '',
+        word_count INTEGER NOT NULL DEFAULT 0,
+        generated_at TEXT,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+        UNIQUE(project_id, num)
+    )""",
+]
+
+
+def init_db(conn=None) -> None:
     """Tạo tất cả bảng nếu chưa có"""
     if conn is None:
         conn = get_db()
 
-    conn.executescript("""
-        CREATE TABLE IF NOT EXISTS config (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        );
+    for ddl in _DDL_STATEMENTS:
+        conn.execute(ddl)
 
-        CREATE TABLE IF NOT EXISTS backends (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT NOT NULL UNIQUE,
-            type TEXT NOT NULL,
-            base_url TEXT NOT NULL,
-            api_key TEXT NOT NULL DEFAULT '',
-            model TEXT NOT NULL DEFAULT '',
-            enabled INTEGER NOT NULL DEFAULT 1,
-            timeout INTEGER NOT NULL DEFAULT 30,
-            retry_times INTEGER NOT NULL DEFAULT 3,
-            is_default INTEGER NOT NULL DEFAULT 0,
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS config_backups (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            data TEXT NOT NULL,
-            created_at TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS response_cache (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL,
-            timestamp TEXT NOT NULL,
-            ttl INTEGER NOT NULL DEFAULT 3600
-        );
-
-        CREATE TABLE IF NOT EXISTS generation_cache (
-            project_id TEXT PRIMARY KEY,
-            data TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS chapter_summaries (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id TEXT NOT NULL,
-            chapter_num INTEGER NOT NULL,
-            summary TEXT NOT NULL,
-            generated_at TEXT NOT NULL,
-            UNIQUE(project_id, chapter_num)
-        );
-
-        CREATE TABLE IF NOT EXISTS projects (
-            id TEXT PRIMARY KEY,
-            title TEXT NOT NULL,
-            genre TEXT NOT NULL DEFAULT '',
-            sub_genres TEXT NOT NULL DEFAULT '[]',
-            character_setting TEXT NOT NULL DEFAULT '',
-            world_setting TEXT NOT NULL DEFAULT '',
-            plot_idea TEXT NOT NULL DEFAULT '',
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        );
-
-        CREATE TABLE IF NOT EXISTS chapters (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            project_id TEXT NOT NULL,
-            num INTEGER NOT NULL,
-            title TEXT NOT NULL DEFAULT '',
-            desc TEXT NOT NULL DEFAULT '',
-            content TEXT NOT NULL DEFAULT '',
-            word_count INTEGER NOT NULL DEFAULT 0,
-            generated_at TEXT,
-            FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-            UNIQUE(project_id, num)
-        );
-    """)
-    
     # Đảm bảo schema cũ được cập nhật
     try:
         conn.execute("ALTER TABLE projects ADD COLUMN sub_genres TEXT NOT NULL DEFAULT '[]'")
-    except sqlite3.OperationalError:
-        pass # Đã có cột
-        
+    except Exception:
+        pass  # Đã có cột
+
     conn.commit()
     logger.info("Database tables initialized")
 
@@ -143,13 +276,12 @@ def migrate_from_files() -> str:
             with open(config_file, "r", encoding="utf-8") as f:
                 data = json.load(f)
 
-            # Migrate backends
             backends = data.get("backends", [])
             migrated_backends = 0
             for b in backends:
                 try:
                     conn.execute("""
-                        INSERT OR IGNORE INTO backends 
+                        INSERT OR IGNORE INTO backends
                         (name, type, base_url, api_key, model, enabled, timeout, retry_times, is_default, created_at, updated_at)
                         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     """, (
@@ -168,7 +300,6 @@ def migrate_from_files() -> str:
                 except Exception as e:
                     logger.warning(f"Migrate backend failed: {e}")
 
-            # Migrate generation config
             gen = data.get("generation", {})
             if gen:
                 conn.execute(
@@ -176,7 +307,6 @@ def migrate_from_files() -> str:
                     ("generation", json.dumps(gen, ensure_ascii=False), now)
                 )
 
-            # Migrate version
             version = data.get("version", "4.0.0")
             conn.execute(
                 "INSERT OR REPLACE INTO config (key, value, updated_at) VALUES (?, ?, ?)",
@@ -200,7 +330,6 @@ def migrate_from_files() -> str:
                 try:
                     with open(fpath, "r", encoding="utf-8") as f:
                         backup_data = f.read()
-                    # Extract timestamp from filename if possible
                     created = now
                     if fname.startswith("backup_"):
                         parts = fname.replace("backup_", "").replace(".json", "")
@@ -271,7 +400,7 @@ def migrate_from_files() -> str:
                     with open(summary_file, "r", encoding="utf-8") as f:
                         summary_data = json.load(f)
                     conn.execute("""
-                        INSERT OR IGNORE INTO chapter_summaries 
+                        INSERT OR IGNORE INTO chapter_summaries
                         (project_id, chapter_num, summary, generated_at)
                         VALUES (?, ?, ?, ?)
                     """, (
@@ -302,7 +431,7 @@ def migrate_from_files() -> str:
                     metadata = json.load(f)
 
                 conn.execute("""
-                    INSERT OR IGNORE INTO projects 
+                    INSERT OR IGNORE INTO projects
                     (id, title, genre, character_setting, world_setting, plot_idea, created_at, updated_at)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
@@ -316,11 +445,10 @@ def migrate_from_files() -> str:
                     metadata.get("updated_at", now)
                 ))
 
-                # Migrate chapters
                 for ch in metadata.get("chapters", []):
                     try:
                         conn.execute("""
-                            INSERT OR IGNORE INTO chapters 
+                            INSERT OR IGNORE INTO chapters
                             (project_id, num, title, desc, content, word_count, generated_at)
                             VALUES (?, ?, ?, ?, ?, ?, ?)
                         """, (
@@ -343,6 +471,9 @@ def migrate_from_files() -> str:
         report.append(f"✅ Projects: {migrated_projects} projects migrated")
     else:
         report.append("⏭ Projects directory not found, skipped")
+
+    # Sync với Turso cloud nếu đang dùng embedded replica
+    _connection.sync()
 
     result = "\n".join(report)
     logger.info(f"Migration complete:\n{result}")
