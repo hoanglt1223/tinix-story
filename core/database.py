@@ -138,19 +138,9 @@ def _create_connection():
     """Tạo kết nối DB dựa trên env vars"""
     import libsql_experimental as libsql
 
-    if TURSO_DATABASE_URL and TURSO_AUTH_TOKEN:
-        # Turso cloud với embedded replica (local cache + cloud sync)
+    if TURSO_DATABASE_URL:
+        # Turso cloud — remote only (serverless-safe, không cần local file)
         logger.info(f"Connecting to Turso: {TURSO_DATABASE_URL[:40]}...")
-        conn = libsql.connect(
-            f"file:{DB_FILE}",
-            sync_url=TURSO_DATABASE_URL,
-            auth_token=TURSO_AUTH_TOKEN,
-        )
-        conn.sync()
-        logger.info("Turso embedded replica connected and synced")
-    elif TURSO_DATABASE_URL:
-        # Turso cloud only (không có local replica)
-        logger.info(f"Connecting to Turso (remote only): {TURSO_DATABASE_URL[:40]}...")
         conn = libsql.connect(
             TURSO_DATABASE_URL,
             auth_token=TURSO_AUTH_TOKEN or "",
@@ -483,7 +473,10 @@ def migrate_from_files() -> str:
         report.append("⏭ Projects directory not found, skipped")
 
     # Sync với Turso cloud nếu đang dùng embedded replica
-    _connection.sync()
+    try:
+        _connection.sync()
+    except Exception:
+        pass
 
     result = "\n".join(report)
     logger.info(f"Migration complete:\n{result}")
