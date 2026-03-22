@@ -202,3 +202,4 @@ gradio_cached/
 !.env.template
 .vercel
 .env*.local
+.claude/worktrees/
