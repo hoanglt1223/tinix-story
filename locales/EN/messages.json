@@ -502,6 +502,44 @@
         "name_literary": "Rewrite Style - Poetic Literary",
         "name_adventure": "Rewrite Style - Hot-blooded Adventure"
     },
+    "streaming": {
+        "generating_chapter": "Generating Chapter {num}/{total}: {title}",
+        "words_so_far": "Chapter {num}/{total} - {words} words generated...",
+        "words_live": "Chapter {num} - {words} words...",
+        "generating_single": "Generating Chapter {num}..."
+    },
+    "dashboard": {
+        "header": "Project Dashboard",
+        "no_projects": "No projects yet. Create one in the 'Create from Scratch' tab.",
+        "col_title": "Title",
+        "col_genre": "Genre",
+        "col_progress": "Progress",
+        "col_words": "Words",
+        "col_updated": "Last Updated"
+    },
+    "chapter_mgmt": {
+        "header": "Chapter Management",
+        "move_up": "Move Up",
+        "move_down": "Move Down",
+        "merge_next": "Merge with Next",
+        "delete_chapter": "Delete Chapter",
+        "insert_header": "Insert Chapter After Current",
+        "insert_title": "New Chapter Title",
+        "insert_title_ph": "Enter title...",
+        "insert_desc": "New Chapter Description",
+        "insert_desc_ph": "Enter brief description...",
+        "insert_btn": "Insert Chapter",
+        "status": "Management Status",
+        "reorder_no_change": "No change needed",
+        "reorder_success": "Chapter reordered successfully",
+        "insert_success": "Chapter {num} inserted",
+        "delete_success": "Chapter deleted and renumbered",
+        "merge_success": "Chapters merged successfully",
+        "merge_not_found": "One or both chapters not found",
+        "already_first": "Already the first chapter",
+        "already_last": "Already the last chapter",
+        "no_next_chapter": "No next chapter to merge with"
+    },
     "prompts": {
         "outline_system": "You are a professional novel outline planner and plot architect.",
         "outline_user": "Please generate a full outline for a {genre} novel, Title: 《{title}》.\n\nCharacters: {character_setting}\n\nWorld: {world_setting}\n\nPlot: {plot_idea}\n\nStyle: {style_desc}\n\nRequirements:\n1. Total chapters: ~{total_chapters}\n2. Strict chapter format: Chapter X: Title - Brief plot description (50-100 words)\n3. Coherent plot, logical character development\n4. ONLY OUTPUT the outline list\n5. Must be captivating with good suspense\n6. Follow 3-act structure (25% beginning, 50% middle, 25% end)\n7. Every chapter needs a conflict or progress, no filler",

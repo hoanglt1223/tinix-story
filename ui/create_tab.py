@@ -251,14 +251,15 @@ def build_create_tab():
                     yield "\n".join(results), gr.update(choices=generated_chapters)
                     break
 
-                results.append(f"\n✍️ Đang sinh Chương {chapter.num}: {chapter.title}...")
+                progress_msg = t("streaming.generating_chapter", num=chapter.num, total=len(chapters), title=chapter.title)
+                results.append(f"\n✍️ {progress_msg}")
                 progress((i + 1) / len(chapters))
                 yield "\n".join(results), gr.update(choices=generated_chapters)
 
                 mem_ch = int(mem_chaps) if mem_chaps else 3
                 start_idx = max(0, i - mem_ch)
                 past_chapters = chapters[start_idx:i]
-                
+
                 prev_content = ""
                 context_summary = ""
 
@@ -276,33 +277,48 @@ def build_create_tab():
                             c.summary = summ
                         if c.summary:
                             summaries.append(f"Chương {c.num} - {c.title}: {c.summary}")
-                    
+
                     if summaries:
                         context_summary = "\n".join(summaries)
-                    
+
                     if i > 0 and chapters[i-1].content:
                         prev_content = chapters[i-1].content[-1500:]
 
-                content, msg = gen.generate_chapter(
+                # Dùng streaming để hiển thị nội dung trực tiếp
+                accumulated = ""
+                stream_ok = False
+                stream_err = ""
+                for success, chunk in gen.generate_chapter_stream(
                     chapter_num=chapter.num, chapter_title=chapter.title,
                     chapter_desc=chapter.desc, novel_title=title,
                     character_setting=char_setting, world_setting=world_setting,
                     plot_idea=plot_idea, genre=genre, sub_genres=sub_genres,
                     previous_content=prev_content, context_summary=context_summary,
                     use_reflection=use_reflection
-                )
+                ):
+                    if success:
+                        accumulated += chunk
+                        stream_ok = True
+                        word_count = len(accumulated.split())
+                        stream_label = t("streaming.words_so_far", num=chapter.num, total=len(chapters), words=word_count)
+                        # Cập nhật progress với số chữ hiện tại
+                        status_lines = results + [f"  📝 {stream_label}"]
+                        yield "\n".join(status_lines), gr.update(choices=generated_chapters)
+                    else:
+                        stream_err = chunk
 
+                content = accumulated if stream_ok else ""
                 if content:
                     chapter.content = content
-                    chapter.word_count = len(content)
+                    chapter.word_count = len(content.split())
                     chapter.generated_at = datetime.now().isoformat()
-                    results.append(f"✅ Chương {chapter.num}: {len(content)} từ")
+                    results.append(f"✅ Chương {chapter.num}: {chapter.word_count} từ")
                     ProjectManager.save_project(project)
                     chapter_name = f"Chương {chapter.num}: {chapter.title}"
                     generated_chapters.append(chapter_name)
                     yield "\n".join(results), gr.update(choices=generated_chapters, value=chapter_name)
                 else:
-                    results.append(f"❌ Chương {chapter.num}: {msg}")
+                    results.append(f"❌ Chương {chapter.num}: {stream_err}")
                     yield "\n".join(results), gr.update(choices=generated_chapters)
 
             app_state.is_generating = False

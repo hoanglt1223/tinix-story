@@ -202,9 +202,13 @@ def build_continue_tab():
                 if all_past_chapters:
                     prev_content = all_past_chapters[-1].content[-1500:]
 
-            yield f"⏳ Đang sinh Chương {int(ch_num)}...", "", gr.update(interactive=False), gr.update(), gr.update()
+            yield f"⏳ {t('streaming.generating_single', num=int(ch_num))}", "", gr.update(interactive=False), gr.update(), gr.update()
 
-            content, msg = gen.generate_chapter(
+            # Dùng streaming để hiển thị nội dung trực tiếp
+            accumulated = ""
+            stream_ok = False
+            stream_err = ""
+            for success, chunk in gen.generate_chapter_stream(
                 chapter_num=int(ch_num), chapter_title=ch_title,
                 chapter_desc=ch_desc, novel_title=project.title,
                 character_setting=project.character_setting,
@@ -213,7 +217,18 @@ def build_continue_tab():
                 sub_genres=project.sub_genres,
                 previous_content=prev_content, context_summary=context_summary, custom_prompt=custom_prompt,
                 use_reflection=use_reflection
-            )
+            ):
+                if success:
+                    accumulated += chunk
+                    stream_ok = True
+                    word_count = len(accumulated.split())
+                    stream_label = t("streaming.words_live", num=int(ch_num), words=word_count)
+                    yield f"✍️ {stream_label}", accumulated, gr.update(interactive=False), gr.update(), gr.update()
+                else:
+                    stream_err = chunk
+
+            content = accumulated if stream_ok else ""
+            msg = stream_err if not stream_ok else ""
 
             if content:
                 new_ch = Chapter(
@@ -307,7 +322,11 @@ def build_continue_tab():
                     if all_past_chapters:
                         prev_content = all_past_chapters[-1].content[-1500:]
 
-                content, msg = gen.generate_chapter(
+                # Dùng streaming để hiển thị nội dung trực tiếp
+                accumulated = ""
+                stream_ok = False
+                stream_err = ""
+                for success, chunk in gen.generate_chapter_stream(
                     chapter_num=int(ch.num), chapter_title=ch.title,
                     chapter_desc=ch.desc, novel_title=project.title,
                     character_setting=project.character_setting,
@@ -316,27 +335,39 @@ def build_continue_tab():
                     sub_genres=project.sub_genres,
                     previous_content=prev_content, context_summary=context_summary, custom_prompt=custom_prompt,
                     use_reflection=use_reflection
-                )
+                ):
+                    if success:
+                        accumulated += chunk
+                        stream_ok = True
+                        word_count = len(accumulated.split())
+                        stream_label = t("streaming.words_live", num=int(ch.num), words=word_count)
+                        status_lines = results + [f"  📝 {stream_label}"]
+                        yield "\n".join(status_lines), accumulated, gr.update(interactive=False), gr.update(interactive=False), gr.update(), gr.update()
+                    else:
+                        stream_err = chunk
+
+                content = accumulated if stream_ok else ""
+                msg = stream_err if not stream_ok else ""
 
                 if content:
                     ch.content = content
-                    ch.word_count = len(content)
+                    ch.word_count = len(content.split())
                     ch.generated_at = datetime.now().isoformat()
                     ProjectManager.save_project(project)
                     last_content = content
-                    
+
                     # Format the outline list
                     outline_lines = []
                     for pr_ch in project.chapters:
                         status = "✅" if getattr(pr_ch, 'content', None) else "⬜"
                         outline_lines.append(f"{status} Chương {pr_ch.num}: {pr_ch.title} - {pr_ch.desc}")
                     outline_text = "\n".join(outline_lines)
-                    
+
                     # Update choices
-                    chapter_choices = [f"Chương {ch.num}: {ch.title}" for ch in project.chapters if getattr(ch, 'content', None)]
+                    chapter_choices = [f"Chương {c2.num}: {c2.title}" for c2 in project.chapters if getattr(c2, 'content', None)]
                     selected_choice = f"Chương {ch.num}: {ch.title}"
-                    
-                    results.append(f"✅ Chương {ch.num} hoàn tất ({len(content)} từ)")
+
+                    results.append(f"✅ Chương {ch.num} hoàn tất ({ch.word_count} từ)")
                     yield "\n".join(results), content, gr.update(interactive=False), gr.update(interactive=False), gr.update(value=outline_text), gr.update(choices=chapter_choices, value=selected_choice)
                 else:
                     results.append(f"❌ Lỗi ở chương {ch.num}: {msg}")
