@@ -289,6 +289,146 @@ class ProjectManager:
             return []
 
     @staticmethod
+    def get_project_stats() -> List[Dict]:
+        """Lấy thống kê chi tiết tất cả dự án (dashboard)"""
+        try:
+            conn = get_db()
+            rows = conn.execute("""
+                SELECT p.id, p.title, p.genre, p.created_at, p.updated_at,
+                COUNT(c.id) as total_chapters,
+                SUM(CASE WHEN c.content != '' THEN 1 ELSE 0 END) as completed_chapters,
+                SUM(c.word_count) as total_words
+                FROM projects p LEFT JOIN chapters c ON p.id = c.project_id
+                GROUP BY p.id ORDER BY p.updated_at DESC
+            """).fetchall()
+            return [
+                {
+                    "id": r["id"],
+                    "title": r["title"],
+                    "genre": r["genre"] or "",
+                    "created_at": r["created_at"] or "",
+                    "updated_at": r["updated_at"] or "",
+                    "total_chapters": r["total_chapters"] or 0,
+                    "completed_chapters": r["completed_chapters"] or 0,
+                    "total_words": r["total_words"] or 0,
+                }
+                for r in rows
+            ]
+        except Exception as e:
+            logger.error(f"Get project stats failed: {e}")
+            return []
+
+    @staticmethod
+    def reorder_chapter(project_id: str, old_num: int, new_num: int) -> Tuple[bool, str]:
+        """Di chuyển chương từ old_num sang new_num, dịch chuyển các chương khác"""
+        try:
+            conn = get_db()
+            if old_num == new_num:
+                return True, t("chapter_mgmt.reorder_no_change")
+            # Dùng số tạm thời để tránh vi phạm UNIQUE
+            conn.execute(
+                "UPDATE chapters SET num = -1 WHERE project_id = ? AND num = ?",
+                (project_id, old_num)
+            )
+            if old_num < new_num:
+                conn.execute(
+                    "UPDATE chapters SET num = num - 1 WHERE project_id = ? AND num > ? AND num <= ?",
+                    (project_id, old_num, new_num)
+                )
+            else:
+                conn.execute(
+                    "UPDATE chapters SET num = num + 1 WHERE project_id = ? AND num >= ? AND num < ?",
+                    (project_id, new_num, old_num)
+                )
+            conn.execute(
+                "UPDATE chapters SET num = ? WHERE project_id = ? AND num = -1",
+                (new_num, project_id)
+            )
+            conn.commit()
+            logger.info(f"Chapter reordered: {project_id} {old_num} -> {new_num}")
+            return True, t("chapter_mgmt.reorder_success")
+        except Exception as e:
+            logger.error(f"Reorder chapter failed: {e}")
+            return False, str(e)
+
+    @staticmethod
+    def insert_chapter(project_id: str, after_num: int, title: str = "", desc: str = "") -> Tuple[int, str]:
+        """Chèn chương trống sau chương after_num"""
+        try:
+            conn = get_db()
+            conn.execute(
+                "UPDATE chapters SET num = num + 1 WHERE project_id = ? AND num > ?",
+                (project_id, after_num)
+            )
+            new_num = after_num + 1
+            conn.execute(
+                "INSERT INTO chapters (project_id, num, title, desc, content, word_count) VALUES (?, ?, ?, ?, '', 0)",
+                (project_id, new_num, title, desc)
+            )
+            conn.commit()
+            logger.info(f"Chapter inserted: {project_id} after {after_num}, new num={new_num}")
+            return new_num, t("chapter_mgmt.insert_success", num=new_num)
+        except Exception as e:
+            logger.error(f"Insert chapter failed: {e}")
+            return -1, str(e)
+
+    @staticmethod
+    def delete_chapter(project_id: str, chapter_num: int) -> Tuple[bool, str]:
+        """Xóa chương và đánh lại số các chương còn lại"""
+        try:
+            conn = get_db()
+            conn.execute(
+                "DELETE FROM chapters WHERE project_id = ? AND num = ?",
+                (project_id, chapter_num)
+            )
+            conn.execute(
+                "UPDATE chapters SET num = num - 1 WHERE project_id = ? AND num > ?",
+                (project_id, chapter_num)
+            )
+            conn.commit()
+            logger.info(f"Chapter deleted: {project_id} num={chapter_num}")
+            return True, t("chapter_mgmt.delete_success")
+        except Exception as e:
+            logger.error(f"Delete chapter failed: {e}")
+            return False, str(e)
+
+    @staticmethod
+    def merge_chapters(project_id: str, num1: int, num2: int) -> Tuple[bool, str]:
+        """Gộp chương num2 vào chương num1"""
+        try:
+            conn = get_db()
+            ch1 = conn.execute(
+                "SELECT content, word_count FROM chapters WHERE project_id = ? AND num = ?",
+                (project_id, num1)
+            ).fetchone()
+            ch2 = conn.execute(
+                "SELECT content, word_count FROM chapters WHERE project_id = ? AND num = ?",
+                (project_id, num2)
+            ).fetchone()
+            if not ch1 or not ch2:
+                return False, t("chapter_mgmt.merge_not_found")
+            merged_content = (ch1["content"] or "") + "\n\n" + (ch2["content"] or "")
+            merged_wc = len(merged_content.split())
+            conn.execute(
+                "UPDATE chapters SET content = ?, word_count = ? WHERE project_id = ? AND num = ?",
+                (merged_content, merged_wc, project_id, num1)
+            )
+            conn.execute(
+                "DELETE FROM chapters WHERE project_id = ? AND num = ?",
+                (project_id, num2)
+            )
+            conn.execute(
+                "UPDATE chapters SET num = num - 1 WHERE project_id = ? AND num > ?",
+                (project_id, num2)
+            )
+            conn.commit()
+            logger.info(f"Chapters merged: {project_id} {num1}+{num2}")
+            return True, t("chapter_mgmt.merge_success")
+        except Exception as e:
+            logger.error(f"Merge chapters failed: {e}")
+            return False, str(e)
+
+    @staticmethod
     def delete_project(project_id: str) -> Tuple[bool, str]:
         """
         Xóa dự án từ SQLite

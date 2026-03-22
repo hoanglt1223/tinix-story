@@ -663,6 +663,44 @@
         "name_literary": "Phong cách - Văn nghệ thanh tân",
         "name_adventure": "Phong cách - Phiêu lưu nhiệt huyết"
     },
+    "streaming": {
+        "generating_chapter": "Đang sinh Chương {num}/{total}: {title}",
+        "words_so_far": "Chương {num}/{total} - đã sinh {words} từ...",
+        "words_live": "Chương {num} - {words} từ...",
+        "generating_single": "Đang sinh Chương {num}..."
+    },
+    "dashboard": {
+        "header": "Bảng tổng quan dự án",
+        "no_projects": "Chưa có dự án. Tạo mới ở tab 'Sáng tác từ đầu'.",
+        "col_title": "Tên truyện",
+        "col_genre": "Thể loại",
+        "col_progress": "Tiến độ",
+        "col_words": "Số từ",
+        "col_updated": "Cập nhật lần cuối"
+    },
+    "chapter_mgmt": {
+        "header": "Quản lý chương",
+        "move_up": "Lên trên",
+        "move_down": "Xuống dưới",
+        "merge_next": "Gộp với chương tiếp",
+        "delete_chapter": "Xóa chương",
+        "insert_header": "Chèn chương sau chương hiện tại",
+        "insert_title": "Tiêu đề chương mới",
+        "insert_title_ph": "Nhập tiêu đề...",
+        "insert_desc": "Mô tả chương mới",
+        "insert_desc_ph": "Nhập mô tả ngắn...",
+        "insert_btn": "Chèn chương",
+        "status": "Trạng thái quản lý",
+        "reorder_no_change": "Không cần thay đổi",
+        "reorder_success": "Đã sắp xếp lại chương thành công",
+        "insert_success": "Đã chèn chương {num}",
+        "delete_success": "Đã xóa chương và đánh số lại",
+        "merge_success": "Đã gộp chương thành công",
+        "merge_not_found": "Không tìm thấy một hoặc cả hai chương",
+        "already_first": "Đây đã là chương đầu tiên",
+        "already_last": "Đây đã là chương cuối cùng",
+        "no_next_chapter": "Không có chương tiếp theo để gộp"
+    },
     "prompts": {
         "outline_system": "Bạn là nhà hoạch định dàn ý tiểu thuyết chuyên nghiệp, giỏi xây dựng khung truyện hấp dẫn.",
         "outline_user": "Hãy tạo dàn ý đầy đủ cho một tiểu thuyết thể loại {genre}, tiêu đề: «{title}».\n\nThiết lập nhân vật: {character_setting}\n\nThế giới quan: {world_setting}\n\nCốt truyện chính: {plot_idea}\n\nYêu cầu phong cách: {style_desc}\n\nYêu cầu:\n1. Tổng cộng khoảng {total_chapters} chương\n2. Mỗi chương theo định dạng nghiêm ngặt: Chương X: Tiêu đề chương - Mô tả cốt truyện ngắn gọn (50-100 từ)\n3. Cốt truyện mạch lạc, có mở đầu - phát triển - cao trào - kết thúc, nhân vật phát triển hợp lý\n4. Chỉ xuất ra danh sách dàn ý, không có nội dung khác\n5. Dàn ý phải hấp dẫn, lôi cuốn, có yếu tố hồi hộp\n6. Phân bổ chương theo cấu trúc 3 hồi:\n   - Hồi 1 (25% số chương): Giới thiệu, xây dựng thế giới, thiết lập xung đột\n   - Hồi 2 (50% số chương): Phát triển, leo thang, bước ngoặt giữa truyện\n   - Hồi 3 (25% số chương): Cao trào, giải quyết, kết thúc\n7. Mỗi chương phải có xung đột nhỏ hoặc tiến triển rõ ràng, không có chương 'chữ lót'",
