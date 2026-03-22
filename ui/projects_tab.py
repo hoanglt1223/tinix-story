@@ -1,6 +1,7 @@
 import gradio as gr
 from locales.i18n import t
 from services.project_manager import ProjectManager, list_project_titles
+from services.consistency_checker import ConsistencyChecker
 import logging
 
 logger = logging.getLogger(__name__)
@@ -141,6 +142,50 @@ def build_projects_tab():
                 fn=on_editor_save,
                 inputs=[editor_chapter_selector, editor_textbox, editor_project_id],
                 outputs=[editor_status]
+            )
+
+        # === Consistency Check Section ===
+        with gr.Accordion(f"🔍 {t('consistency.accordion_label')}", open=False):
+            consistency_project_selector = gr.Dropdown(
+                choices=list_project_titles(),
+                label=t("consistency.select_project"),
+                interactive=True
+            )
+            consistency_check_btn = gr.Button(t("consistency.check_btn"), variant="primary")
+            consistency_status = gr.Textbox(label=t("projects.status_label"), interactive=False)
+            consistency_result = gr.Markdown("")
+
+            # Trạng thái nội bộ lưu project_id
+            consistency_project_id = gr.State(value=None)
+
+            def on_consistency_project_select(project_title):
+                if not project_title:
+                    return None
+                project_data = ProjectManager.get_project_by_title(project_title)
+                return project_data["id"] if project_data else None
+
+            def on_check_consistency(project_id):
+                if not project_id:
+                    return t("consistency.status_no_project"), ""
+                try:
+                    issues = ConsistencyChecker.check_project(project_id)
+                    if issues is None:
+                        return t("consistency.status_not_enough"), ""
+                    report = ConsistencyChecker.format_report(issues)
+                    return t("consistency.status_done"), report
+                except Exception as e:
+                    logger.error(f"Consistency check failed: {e}")
+                    return f"❌ {str(e)}", ""
+
+            consistency_project_selector.change(
+                fn=on_consistency_project_select,
+                inputs=[consistency_project_selector],
+                outputs=[consistency_project_id]
+            )
+            consistency_check_btn.click(
+                fn=on_check_consistency,
+                inputs=[consistency_project_id],
+                outputs=[consistency_status, consistency_result]
             )
 
         refresh_projects_btn.click(fn=on_refresh_projects, outputs=[projects_table, delete_project_selector])

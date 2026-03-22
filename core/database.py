@@ -236,6 +236,17 @@ _DDL_STATEMENTS = [
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
         UNIQUE(project_id, num)
     )""",
+    """CREATE TABLE IF NOT EXISTS api_usage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id TEXT,
+        backend_name TEXT NOT NULL,
+        model TEXT NOT NULL,
+        tokens_in INTEGER NOT NULL DEFAULT 0,
+        tokens_out INTEGER NOT NULL DEFAULT 0,
+        cost_estimate REAL NOT NULL DEFAULT 0.0,
+        operation TEXT NOT NULL DEFAULT 'generate',
+        created_at TEXT NOT NULL
+    )""",
 ]
 
 

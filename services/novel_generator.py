@@ -1505,3 +1505,64 @@ def get_summary_cache_size() -> int:
         return row["total"] if row else 0
     except Exception:
         return 0
+
+
+# === Outline Editor helpers ===
+
+def get_outline_chapters(project_id: str) -> List[Dict]:
+    """Lấy danh sách chương (num, title, desc) của dự án để hiển thị trong editor"""
+    try:
+        conn = get_db()
+        rows = conn.execute(
+            "SELECT num, title, desc FROM chapters WHERE project_id = ? ORDER BY num",
+            (project_id,)
+        ).fetchall()
+        return [{"num": r["num"], "title": r["title"], "desc": r["desc"]} for r in rows]
+    except Exception as e:
+        logger.error(f"get_outline_chapters failed: {e}")
+        return []
+
+
+def update_chapter_outline(project_id: str, chapter_num: int, title: str, desc: str) -> Tuple[bool, str]:
+    """Cập nhật tiêu đề và mô tả của một chương trong dàn ý"""
+    try:
+        conn = get_db()
+        conn.execute(
+            "UPDATE chapters SET title = ?, desc = ? WHERE project_id = ? AND num = ?",
+            (title, desc, project_id, chapter_num)
+        )
+        conn.commit()
+        return True, "OK"
+    except Exception as e:
+        logger.error(f"update_chapter_outline failed: {e}")
+        return False, str(e)
+
+
+def save_outline_chapters(project_id: str, rows: List[List]) -> Tuple[bool, str]:
+    """
+    Lưu toàn bộ thay đổi từ Dataframe (list of [num, title, desc]).
+    Chỉ cập nhật title và desc; không tạo mới hay xóa chương.
+    """
+    try:
+        conn = get_db()
+        updated = 0
+        for row in rows:
+            if len(row) < 3:
+                continue
+            num = row[0]
+            title = str(row[1] or "").strip()
+            desc = str(row[2] or "").strip()
+            try:
+                num = int(num)
+            except (TypeError, ValueError):
+                continue
+            conn.execute(
+                "UPDATE chapters SET title = ?, desc = ? WHERE project_id = ? AND num = ?",
+                (title, desc, project_id, num)
+            )
+            updated += 1
+        conn.commit()
+        return True, str(updated)
+    except Exception as e:
+        logger.error(f"save_outline_chapters failed: {e}")
+        return False, str(e)

@@ -1,6 +1,7 @@
 import gradio as gr
 from locales.i18n import t
 from core.config import get_config, API_PROVIDERS
+from services.cost_tracker import CostTracker
 from core.config_api import ConfigAPIManager
 from services.api_client import get_api_client, reinit_api_client
 from services.novel_generator import get_cache_size, list_generation_caches, clear_generation_cache
@@ -548,4 +549,67 @@ def build_settings_tab():
                     inputs=[theme_toggle],
                     outputs=[theme_status],
                     js="(v) => { if(v==='Dark') document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode'); return v; }"
+                )
+
+            # Sub-tab: Thống kê chi phí token
+            with gr.Tab(f"💰 {t('cost_tracker.tab_label')}"):
+                gr.Markdown(f"#### {t('cost_tracker.total_header')}")
+                cost_summary_md = gr.Markdown(t("cost_tracker.no_data"))
+
+                with gr.Row():
+                    cost_refresh_btn = gr.Button(t("cost_tracker.refresh_btn"), size="sm")
+
+                gr.Markdown(f"#### {t('cost_tracker.by_project_header')}")
+                cost_by_project_df = gr.Dataframe(
+                    headers=[
+                        t("cost_tracker.col_project"),
+                        t("cost_tracker.col_tokens_in"),
+                        t("cost_tracker.col_tokens_out"),
+                        t("cost_tracker.col_cost"),
+                        t("cost_tracker.col_calls"),
+                    ],
+                    datatype=["str", "number", "number", "number", "number"],
+                    interactive=False
+                )
+
+                gr.Markdown(f"#### {t('cost_tracker.by_backend_header')}")
+                cost_by_backend_df = gr.Dataframe(
+                    headers=[
+                        t("cost_tracker.col_backend"),
+                        t("cost_tracker.col_model"),
+                        t("cost_tracker.col_tokens_in"),
+                        t("cost_tracker.col_tokens_out"),
+                        t("cost_tracker.col_cost"),
+                        t("cost_tracker.col_calls"),
+                    ],
+                    datatype=["str", "str", "number", "number", "number", "number"],
+                    interactive=False
+                )
+
+                def on_cost_refresh():
+                    # Tổng hợp tổng
+                    totals = CostTracker.get_total_costs()
+                    summary = (
+                        f"- **{t('cost_tracker.total_tokens_in')}**: {totals['tokens_in']:,}\n"
+                        f"- **{t('cost_tracker.total_tokens_out')}**: {totals['tokens_out']:,}\n"
+                        f"- **{t('cost_tracker.total_cost')}**: ${totals['cost']:.4f}\n"
+                        f"- **{t('cost_tracker.total_calls')}**: {totals['calls']:,}"
+                    )
+                    # Theo dự án
+                    by_project = CostTracker.get_costs_by_project()
+                    project_rows = [
+                        [r["title"], r["tokens_in"], r["tokens_out"], round(r["cost"], 6), r["calls"]]
+                        for r in by_project
+                    ]
+                    # Theo backend
+                    by_backend = CostTracker.get_costs_by_backend()
+                    backend_rows = [
+                        [r["backend_name"], r["model"], r["tokens_in"], r["tokens_out"], round(r["cost"], 6), r["calls"]]
+                        for r in by_backend
+                    ]
+                    return summary, project_rows, backend_rows
+
+                cost_refresh_btn.click(
+                    fn=on_cost_refresh,
+                    outputs=[cost_summary_md, cost_by_project_df, cost_by_backend_df]
                 )
