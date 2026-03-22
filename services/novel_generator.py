@@ -430,6 +430,17 @@ class NovelGenerator:
         genre_desc_prompt = ""
         # TODO: Sắp tới cần update file `app.py` chỗ gọi hàm `generate_chapter` để truyền thêm Genre vào.
         
+        # Tiêm Character Bible nếu có nhân vật trong dự án
+        character_bible_prompt = ""
+        if hasattr(self, '_project_id') and self._project_id:
+            try:
+                from services.character_manager import CharacterManager
+                char_context = CharacterManager.get_character_context(self._project_id)
+                if char_context:
+                    character_bible_prompt = f"\n\nCHARACTER BIBLE:\n{char_context}"
+            except Exception:
+                pass
+
         prompt = t("prompts.chapter_user",
             novel_title=novel_title, chapter_num=chapter_num,
             chapter_title=chapter_title, chapter_desc=chapter_desc,
@@ -441,6 +452,9 @@ class NovelGenerator:
             continuity_prompt=continuity_prompt,
             context_prompt=context_prompt
         )
+
+        if character_bible_prompt:
+            prompt += character_bible_prompt
 
         if custom_prompt:
             prompt += f"\n\n[Yêu cầu bổ sung của tác giả]:\n{custom_prompt}"
@@ -1505,3 +1519,107 @@ def get_summary_cache_size() -> int:
         return row["total"] if row else 0
     except Exception:
         return 0
+
+
+# ===================== Phát hiện & lấp đầy khoảng trống chương ======================
+
+def detect_gaps(project_id: str) -> List[Dict]:
+    """
+    Tìm các chương trống hoặc quá ngắn (word_count < 100).
+
+    Returns:
+        Danh sách dict {num, title, desc, word_count}
+    """
+    if not project_id:
+        return []
+    try:
+        conn = get_db()
+        rows = conn.execute(
+            """SELECT num, title, desc, word_count FROM chapters
+               WHERE project_id = ? AND (content = '' OR content IS NULL OR word_count < 100)
+               ORDER BY num""",
+            (project_id,)
+        ).fetchall()
+        return [{"num": r["num"], "title": r["title"], "desc": r["desc"], "word_count": r["word_count"]} for r in rows]
+    except Exception as e:
+        logger.error(f"detect_gaps thất bại: {e}")
+        return []
+
+
+def fill_chapter_gap(project_id: str, chapter_num: int, novel_title: str = "",
+                     character_setting: str = "", world_setting: str = "",
+                     plot_idea: str = "", genre: str = "") -> Tuple[str, str]:
+    """
+    Tạo nội dung cho chương bị thiếu, lưu vào DB.
+
+    Returns:
+        (nội dung, thông báo)
+    """
+    conn = get_db()
+    # Lấy context 2 chương trước
+    prev_rows = conn.execute(
+        """SELECT content FROM chapters
+           WHERE project_id = ? AND num < ? AND content != '' AND content IS NOT NULL
+           ORDER BY num DESC LIMIT 2""",
+        (project_id, chapter_num)
+    ).fetchall()
+    previous_content = "\n\n".join(r["content"] for r in reversed(prev_rows))[-3000:]
+
+    # Lấy thông tin chương cần tạo
+    ch_row = conn.execute(
+        "SELECT title, desc FROM chapters WHERE project_id = ? AND num = ?",
+        (project_id, chapter_num)
+    ).fetchone()
+    if not ch_row:
+        return "", t("gap_filler.chapter_not_found")
+
+    gen = get_generator()
+    content, msg = gen.generate_chapter(
+        chapter_num=chapter_num,
+        chapter_title=ch_row["title"],
+        chapter_desc=ch_row["desc"],
+        novel_title=novel_title,
+        character_setting=character_setting,
+        world_setting=world_setting,
+        plot_idea=plot_idea,
+        genre=genre,
+        previous_content=previous_content,
+    )
+    if not content:
+        return "", msg
+
+    now = datetime.now().isoformat()
+    conn.execute(
+        """UPDATE chapters SET content = ?, word_count = ?, generated_at = ?
+           WHERE project_id = ? AND num = ?""",
+        (content, len(content), now, project_id, chapter_num)
+    )
+    conn.commit()
+    logger.info(f"Đã lấp đầy chương {chapter_num} dự án {project_id}")
+    return content, t("gap_filler.fill_success", num=chapter_num)
+
+
+def fill_all_gaps(project_id: str, novel_title: str = "", character_setting: str = "",
+                  world_setting: str = "", plot_idea: str = "", genre: str = ""):
+    """
+    Generator lấp đầy tất cả chương trống, yield tiến độ dạng chuỗi.
+    """
+    gaps = detect_gaps(project_id)
+    if not gaps:
+        yield t("gap_filler.no_gaps")
+        return
+
+    yield t("gap_filler.found_gaps", count=len(gaps))
+    for i, gap in enumerate(gaps, 1):
+        yield t("gap_filler.filling", current=i, total=len(gaps), num=gap["num"], title=gap["title"])
+        _, msg = fill_chapter_gap(
+            project_id=project_id,
+            chapter_num=gap["num"],
+            novel_title=novel_title,
+            character_setting=character_setting,
+            world_setting=world_setting,
+            plot_idea=plot_idea,
+            genre=genre,
+        )
+        yield msg
+    yield t("gap_filler.all_done")

@@ -2,9 +2,12 @@ import gradio as gr
 from datetime import datetime
 from locales.i18n import t
 from services.project_manager import ProjectManager, list_project_titles
-from services.novel_generator import Chapter, batch_generate_summaries
+from services.novel_generator import Chapter, batch_generate_summaries, detect_gaps, fill_all_gaps
+from services.novel_analyzer import NovelAnalyzer
+from services.character_manager import CharacterManager
 from services.style_manager import StyleManager
 from core.state import app_state
+from utils.file_parser import parse_novel_file
 import logging
 
 logger = logging.getLogger(__name__)
@@ -62,6 +65,42 @@ def build_continue_tab():
                 
                 continue_custom_prompt = gr.Textbox(label=t("create.custom_prompt_label"), placeholder=t("create.custom_prompt_placeholder"), scale=2)
 
+        with gr.Accordion(t("analyzer.header"), open=False):
+            with gr.Row():
+                analyzer_file = gr.File(label=t("analyzer.upload_label"), file_types=[".txt", ".pdf", ".epub", ".md", ".docx"])
+                with gr.Column():
+                    analyze_btn = gr.Button(t("analyzer.analyze_btn"), variant="secondary")
+                    analyze_status = gr.Textbox(label="Status", interactive=False, lines=1)
+            analyzer_result = gr.Markdown(label=t("analyzer.result_label"), value="")
+
+        with gr.Accordion(t("gap_filler.header"), open=False):
+            with gr.Row():
+                detect_gaps_btn = gr.Button(t("gap_filler.detect_btn"), variant="secondary", scale=1)
+                fill_all_btn = gr.Button(t("gap_filler.fill_all_btn"), variant="primary", scale=1)
+            gaps_display = gr.Textbox(label=t("gap_filler.gaps_label"), interactive=False, lines=5)
+            fill_progress = gr.Textbox(label=t("gap_filler.progress_label"), interactive=False, lines=6)
+
+        with gr.Accordion(t("character.header"), open=False):
+            char_table = gr.Dataframe(
+                headers=["name", "role"],
+                label=t("character.table_label"),
+                interactive=False,
+                row_count=(5, "dynamic"),
+            )
+            gr.Markdown(f"#### {t('character.add_header')}")
+            with gr.Row():
+                char_name = gr.Textbox(label=t("character.name_label"), scale=2)
+                char_role = gr.Textbox(label=t("character.role_label"), scale=2)
+                char_first_ch = gr.Number(label=t("character.first_chapter_label"), value=1, minimum=1, step=1, scale=1)
+            char_appearance = gr.Textbox(label=t("character.appearance_label"), lines=2)
+            char_personality = gr.Textbox(label=t("character.personality_label"), lines=2)
+            char_relationships = gr.Textbox(label=t("character.relationships_label"), lines=2)
+            char_arc_notes = gr.Textbox(label=t("character.arc_notes_label"), lines=2)
+            with gr.Row():
+                char_save_btn = gr.Button(t("character.save_btn"), variant="primary", scale=1)
+                char_delete_btn = gr.Button(t("character.delete_btn"), variant="stop", scale=1)
+            char_status = gr.Textbox(label=t("character.status_label"), interactive=False, lines=1)
+
         with gr.Accordion("🚀 3. Sáng tác tiếp", open=False):
             with gr.Row():
                 continue_chapter_num = gr.Number(label="Chương số", value=1, minimum=1, scale=1)
@@ -81,6 +120,110 @@ def build_continue_tab():
                 with gr.Column(scale=2):
                     continue_chapter_selector = gr.Dropdown(label="Danh sách chương đã tạo", choices=[], interactive=True, allow_custom_value=True)
                     continue_content_display = gr.Textbox(label="Nội dung chương", lines=15, interactive=False)
+
+        # ── Trình xử lý: Phân tích tiểu thuyết ──
+        def on_analyze_novel(file_obj):
+            if file_obj is None:
+                return t("analyzer.empty_text"), ""
+            yield t("analyzer.analyzing"), ""
+            try:
+                paragraphs, _ = parse_novel_file(file_obj.name)
+                text = "\n\n".join(paragraphs)
+                result = NovelAnalyzer.analyze_novel(text)
+                if "error" in result:
+                    yield result["error"], ""
+                    return
+                md = ""
+                if result.get("genre"):
+                    md += f"**Thể loại:** {result['genre']}\n\n"
+                if result.get("characters"):
+                    md += f"**Nhân vật:**\n{result['characters']}\n\n"
+                if result.get("world"):
+                    md += f"**Thế giới / Bối cảnh:**\n{result['world']}\n\n"
+                if result.get("plot"):
+                    md += f"**Cốt truyện:**\n{result['plot']}\n\n"
+                if result.get("style"):
+                    md += f"**Phong cách viết:**\n{result['style']}\n\n"
+                yield t("analyzer.done"), md or str(result)
+            except Exception as e:
+                yield f"❌ {e}", ""
+
+        # ── Trình xử lý: Phát hiện & lấp đầy khoảng trống ──
+        def on_detect_gaps(project_title):
+            if not project_title:
+                return t("gap_filler.no_gaps")
+            project_data = ProjectManager.get_project_by_title(project_title)
+            if not project_data:
+                return t("gap_filler.no_gaps")
+            gaps = detect_gaps(project_data["id"])
+            if not gaps:
+                return t("gap_filler.no_gaps")
+            lines = [t("gap_filler.found_gaps", count=len(gaps))]
+            for g in gaps:
+                lines.append(f"  Chương {g['num']}: {g['title']} ({g['word_count']} ký tự)")
+            return "\n".join(lines)
+
+        def on_fill_all_gaps(project_title):
+            if not project_title:
+                yield t("gap_filler.no_gaps")
+                return
+            project_data = ProjectManager.get_project_by_title(project_title)
+            if not project_data:
+                yield t("gap_filler.no_gaps")
+                return
+            p = project_data
+            results = []
+            for msg in fill_all_gaps(
+                project_id=p["id"],
+                novel_title=p.get("title", ""),
+                character_setting=p.get("character_setting", ""),
+                world_setting=p.get("world_setting", ""),
+                plot_idea=p.get("plot_idea", ""),
+                genre=p.get("genre", ""),
+            ):
+                results.append(msg)
+                yield "\n".join(results)
+
+        # ── Trình xử lý: Hồ sơ nhân vật ──
+        def _get_project_id(project_title):
+            if not project_title:
+                return None
+            pd = ProjectManager.get_project_by_title(project_title)
+            return pd["id"] if pd else None
+
+        def on_load_characters(project_title):
+            pid = _get_project_id(project_title)
+            if not pid:
+                return []
+            chars = CharacterManager.list_characters(pid)
+            return [[c["name"], c["role"]] for c in chars]
+
+        def on_save_character(project_title, name, role, appearance, personality, relationships, arc_notes, first_chapter):
+            pid = _get_project_id(project_title)
+            if not pid:
+                return t("character.no_project"), []
+            ok, msg = CharacterManager.add_character(
+                pid, name,
+                role=role, appearance=appearance, personality=personality,
+                relationships=relationships, arc_notes=arc_notes, first_chapter=first_chapter,
+            )
+            if not ok:
+                # Thử update nếu đã tồn tại
+                ok, msg = CharacterManager.update_character(
+                    pid, name,
+                    role=role, appearance=appearance, personality=personality,
+                    relationships=relationships, arc_notes=arc_notes, first_chapter=first_chapter,
+                )
+            chars = CharacterManager.list_characters(pid)
+            return msg, [[c["name"], c["role"]] for c in chars]
+
+        def on_delete_character(project_title, name):
+            pid = _get_project_id(project_title)
+            if not pid:
+                return t("character.no_project"), []
+            _, msg = CharacterManager.delete_character(pid, name)
+            chars = CharacterManager.list_characters(pid)
+            return msg, [[c["name"], c["role"]] for c in chars]
 
         def on_refresh_continue(current_title):
             titles = list_project_titles()
@@ -401,4 +544,41 @@ def build_continue_tab():
         continue_stop_btn.click(
             fn=on_continue_stop,
             outputs=[continue_status]
+        )
+
+        # Kết nối sự kiện: Phân tích tiểu thuyết
+        analyze_btn.click(
+            fn=on_analyze_novel,
+            inputs=[analyzer_file],
+            outputs=[analyze_status, analyzer_result],
+        )
+
+        # Kết nối sự kiện: Phát hiện & lấp đầy khoảng trống
+        detect_gaps_btn.click(
+            fn=on_detect_gaps,
+            inputs=[continue_project_selector],
+            outputs=[gaps_display],
+        )
+        fill_all_btn.click(
+            fn=on_fill_all_gaps,
+            inputs=[continue_project_selector],
+            outputs=[fill_progress],
+        )
+
+        # Kết nối sự kiện: Hồ sơ nhân vật
+        continue_project_selector.change(
+            fn=on_load_characters,
+            inputs=[continue_project_selector],
+            outputs=[char_table],
+        )
+        char_save_btn.click(
+            fn=on_save_character,
+            inputs=[continue_project_selector, char_name, char_role, char_appearance,
+                    char_personality, char_relationships, char_arc_notes, char_first_ch],
+            outputs=[char_status, char_table],
+        )
+        char_delete_btn.click(
+            fn=on_delete_character,
+            inputs=[continue_project_selector, char_name],
+            outputs=[char_status, char_table],
         )
