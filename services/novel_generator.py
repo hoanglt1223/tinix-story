@@ -362,6 +362,69 @@ class NovelGenerator:
         logger.info(f"Suggestion generation success ({logger_msg})")
         return content, t("generator.suggest_success")
     
+    def _build_chapter_messages(
+        self,
+        chapter_num: int,
+        chapter_title: str,
+        chapter_desc: str,
+        novel_title: str,
+        character_setting: str,
+        world_setting: str,
+        plot_idea: str,
+        genre: str = "",
+        sub_genres: List[str] = None,
+        previous_content: str = "",
+        context_summary: str = "",
+        custom_prompt: str = "",
+    ) -> List[Dict]:
+        """Xây dựng danh sách messages cho việc tạo chương (dùng chung cho generate_chapter và generate_chapter_multi)."""
+        style_desc = self._build_style_description()
+
+        if genre:
+            genre_desc = GenreManager.get_genre_description(genre)
+            if genre_desc:
+                style_desc += f"\n\nHướng dẫn viết riêng cho thể loại {genre}: {genre_desc}"
+
+        if sub_genres:
+            sub_genre_details = []
+            for sg in sub_genres:
+                desc = SubGenreManager.get_sub_genre_description(sg)
+                if desc:
+                    sub_genre_details.append(f"- {sg}: {desc}")
+                else:
+                    sub_genre_details.append(f"- {sg}")
+            style_desc += f"\n\nCác chủ đề con (Tag) bổ sung:\n" + "\n".join(sub_genre_details) + "\n\nHãy kết hợp chặt chẽ các đặc điểm và yếu tố của những chủ đề này vào nội dung chương truyện."
+
+        target_words = self.config.generation.chapter_target_words
+
+        continuity_prompt = ""
+        if previous_content:
+            continuity_prompt = t("prompts.continuity_prompt", previous_content=previous_content[-3000:])
+
+        context_prompt = ""
+        if context_summary:
+            context_prompt = t("prompts.context_prompt", context_summary=context_summary)
+
+        prompt = t("prompts.chapter_user",
+            novel_title=novel_title, chapter_num=chapter_num,
+            chapter_title=chapter_title, chapter_desc=chapter_desc,
+            character_setting=character_setting,
+            world_setting=world_setting,
+            plot_idea=plot_idea,
+            style_desc=style_desc,
+            target_words=target_words,
+            continuity_prompt=continuity_prompt,
+            context_prompt=context_prompt
+        )
+
+        if custom_prompt:
+            prompt += f"\n\n[Yêu cầu bổ sung của tác giả]:\n{custom_prompt}"
+
+        return [
+            {"role": "system", "content": t("prompts.chapter_system")},
+            {"role": "user", "content": prompt}
+        ]
+
     def generate_chapter(
         self,
         chapter_num: int,
@@ -381,76 +444,19 @@ class NovelGenerator:
         """
         Tạo một chương đơn lẻ
 
-        Args (Tham số):
-            chapter_num: Số chương
-            chapter_title: Tiêu đề chương
-            chapter_desc: Mô tả chương
-            novel_title: Tiêu đề tiểu thuyết
-            character_setting: Thiết lập nhân vật
-            world_setting: Thiết lập thế giới quan
-            plot_idea: Cốt truyện chính
-            genre: Thể loại truyện
-            previous_content: Nội dung phần trước (dùng cho tính liền mạch)
-            context_summary: Tóm tắt ngữ cảnh (dùng để tăng cường Context)
-
         Returns (Trả về):
             (Nội dung chương, Thông báo lỗi hoặc tin báo thành công)
         """
-        style_desc = self._build_style_description()
-        
-        if genre:
-            genre_desc = GenreManager.get_genre_description(genre)
-            if genre_desc:
-                style_desc += f"\n\nHướng dẫn viết riêng cho thể loại {genre}: {genre_desc}"
-                
-        if sub_genres:
-            sub_genre_details = []
-            for sg in sub_genres:
-                desc = SubGenreManager.get_sub_genre_description(sg)
-                if desc:
-                    sub_genre_details.append(f"- {sg}: {desc}")
-                else:
-                    sub_genre_details.append(f"- {sg}")
-            style_desc += f"\n\nCác chủ đề con (Tag) bổ sung:\n" + "\n".join(sub_genre_details) + "\n\nHãy kết hợp chặt chẽ các đặc điểm và yếu tố của những chủ đề này vào nội dung chương truyện."
-                
-        target_words = self.config.generation.chapter_target_words
-
-        # Lời khuyên để xây dựng sự gắn kết
-        continuity_prompt = ""
-        if previous_content:
-            continuity_prompt = t("prompts.continuity_prompt", previous_content=previous_content[-3000:])
-
-        context_prompt = ""
-        if context_summary:
-            context_prompt = t("prompts.context_prompt", context_summary=context_summary)
-
-        # Lấy thông tin thể loại truyện thông qua class properties (cần get từ CSDL dự án hoặc cấu hình, mượn tạm cách try-except)
-        # Vì hàm `generate_chapter` ko truyền `genre`, ta sẽ thêm tham số hoặc ngầm hiểu thông qua plot/world_setting. 
-        # Tạm thời cứ gán thêm nếu có thể, hoặc yêu cầu truyền thêm `genre` ở hàm gọi. Sẽ cập nhật `system_prompt` chung với outline.
-        genre_desc_prompt = ""
-        # TODO: Sắp tới cần update file `app.py` chỗ gọi hàm `generate_chapter` để truyền thêm Genre vào.
-        
-        prompt = t("prompts.chapter_user",
-            novel_title=novel_title, chapter_num=chapter_num,
-            chapter_title=chapter_title, chapter_desc=chapter_desc,
-            character_setting=character_setting,
-            world_setting=world_setting,
-            plot_idea=plot_idea,
-            style_desc=style_desc,
-            target_words=target_words,
-            continuity_prompt=continuity_prompt,
-            context_prompt=context_prompt
+        messages = self._build_chapter_messages(
+            chapter_num=chapter_num, chapter_title=chapter_title,
+            chapter_desc=chapter_desc, novel_title=novel_title,
+            character_setting=character_setting, world_setting=world_setting,
+            plot_idea=plot_idea, genre=genre, sub_genres=sub_genres,
+            previous_content=previous_content, context_summary=context_summary,
+            custom_prompt=custom_prompt
         )
-
-        if custom_prompt:
-            prompt += f"\n\n[Yêu cầu bổ sung của tác giả]:\n{custom_prompt}"
-
-        sys_prompt = t("prompts.chapter_system")
-        
-        messages = [
-            {"role": "system", "content": sys_prompt},
-            {"role": "user", "content": prompt}
-        ]
+        prompt = messages[1]["content"]
+        target_words = self.config.generation.chapter_target_words
 
         logger.info(f"Start generating chapter: {chapter_num} - {chapter_title}")
         if context_summary:
@@ -463,7 +469,6 @@ class NovelGenerator:
 
         if use_reflection:
             logger.info("Applying self-reflection to the generated chapter draft...")
-            # Sử dụng content nháp làm nguyên liệu cho lượt tạo reflection mới
             reflection_sys = t("prompts.reflection_system")
             reflection_prompt = t("prompts.reflection_user", chapter_req=prompt, draft_content=content, target_words=target_words)
             reflection_messages = [
@@ -480,6 +485,67 @@ class NovelGenerator:
         logger.info(f"Chapter generation success: {chapter_num}")
         logger.info(f"Chapter content length: {len(content)}")
         return content, t("generator.gen_success")
+
+    def generate_chapter_multi(self, backend_names: List[str], **kwargs) -> Dict[str, str]:
+        """
+        Tạo cùng một chương với nhiều backend song song.
+        Trả về {backend_name: content}.
+        """
+        import threading
+        import time
+        from openai import OpenAI
+
+        messages = self._build_chapter_messages(**kwargs)
+
+        results: Dict[str, str] = {}
+        errors: Dict[str, str] = {}
+        lock = threading.Lock()
+
+        def _generate_with_backend(backend_name: str):
+            config = get_config()
+            backends = config.get_enabled_backends()
+            backend = next((b for b in backends if b.name == backend_name), None)
+            if not backend:
+                with lock:
+                    errors[backend_name] = f"Backend '{backend_name}' not found"
+                return
+            try:
+                client = OpenAI(
+                    base_url=backend.base_url.rstrip("/"),
+                    api_key=backend.api_key,
+                    timeout=backend.timeout
+                )
+                response = client.chat.completions.create(
+                    model=backend.model,
+                    messages=messages,
+                    temperature=config.generation.temperature,
+                    max_tokens=config.generation.max_tokens
+                )
+                content = response.choices[0].message.content if response.choices else ""
+                with lock:
+                    if content and len(content.strip()) >= 10:
+                        results[backend_name] = content.strip()
+                    else:
+                        errors[backend_name] = "Empty or too short response"
+            except Exception as e:
+                with lock:
+                    errors[backend_name] = str(e)
+
+        threads = []
+        for name in backend_names:
+            t_thread = threading.Thread(target=_generate_with_backend, args=(name,))
+            threads.append(t_thread)
+            t_thread.start()
+            time.sleep(1)  # Trải đều request để tránh rate limit
+
+        for t_thread in threads:
+            t_thread.join(timeout=300)
+
+        # Gộp lỗi vào kết quả
+        for name, err in errors.items():
+            results[name] = f"❌ Lỗi: {err}"
+
+        return results
     
     def generate_chapter_stream(
         self,

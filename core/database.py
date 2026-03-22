@@ -236,6 +236,16 @@ _DDL_STATEMENTS = [
         FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
         UNIQUE(project_id, num)
     )""",
+    """CREATE TABLE IF NOT EXISTS chapter_versions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        project_id TEXT NOT NULL,
+        chapter_num INTEGER NOT NULL,
+        version INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        word_count INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+    )""",
 ]
 
 

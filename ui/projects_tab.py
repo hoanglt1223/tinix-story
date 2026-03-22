@@ -81,6 +81,18 @@ def build_projects_tab():
                 editor_save_btn = gr.Button(t("projects.save_chapter"), variant="primary", scale=1)
             editor_status = gr.Textbox(label=t("projects.status_label"), interactive=False)
 
+            with gr.Accordion(t("version.accordion_title"), open=False):
+                with gr.Row():
+                    version_dropdown = gr.Dropdown(
+                        choices=[], label=t("version.dropdown_label"), interactive=True, scale=3
+                    )
+                    version_view_btn = gr.Button(t("version.view_btn"), scale=1)
+                    version_rollback_btn = gr.Button(t("version.rollback_btn"), variant="stop", scale=1)
+                version_content = gr.Textbox(
+                    label=t("version.view_label"), lines=10, interactive=False
+                )
+                version_status = gr.Textbox(label=t("version.status_label"), interactive=False)
+
             # Trạng thái nội bộ lưu project_id
             editor_project_id = gr.State(value=None)
 
@@ -122,6 +134,77 @@ def build_projects_tab():
                 success, msg = ProjectManager.update_chapter_content(project_id, ch_num, content)
                 return f"✅ {t('projects.save_success')}" if success else f"❌ {msg}"
 
+            def _parse_chapter_num(chapter_label):
+                """Trích số chương từ label 'Ch X: ...'"""
+                try:
+                    return int(chapter_label.split(":")[0].replace("Ch ", "").strip())
+                except (ValueError, IndexError, AttributeError):
+                    return None
+
+            def on_version_chapter_select(chapter_label, project_id):
+                """Load danh sách phiên bản khi chọn chương."""
+                if not chapter_label or not project_id:
+                    return gr.update(choices=[], value=None)
+                ch_num = _parse_chapter_num(chapter_label)
+                if ch_num is None:
+                    return gr.update(choices=[], value=None)
+                try:
+                    from services.version_manager import VersionManager
+                    versions = VersionManager.list_versions(project_id, ch_num)
+                    if not versions:
+                        return gr.update(choices=[], value=None)
+                    choices = [
+                        t("version.version_entry", version=v["version"], words=v["word_count"],
+                          date=v["created_at"][:16] if v["created_at"] else "")
+                        for v in versions
+                    ]
+                    return gr.update(choices=choices, value=choices[0])
+                except Exception as e:
+                    logger.error(f"Load versions failed: {e}")
+                    return gr.update(choices=[], value=None)
+
+            def on_version_view(version_entry, chapter_label, project_id):
+                """Hiển thị nội dung phiên bản được chọn."""
+                if not version_entry or not chapter_label or not project_id:
+                    return "", f"❌ {t('version.no_chapter')}"
+                ch_num = _parse_chapter_num(chapter_label)
+                if ch_num is None:
+                    return "", f"❌ {t('version.no_chapter')}"
+                try:
+                    # Trích số phiên bản từ entry string "vX — ..."
+                    ver_num = int(version_entry.split("—")[0].replace("v", "").strip())
+                    from services.version_manager import VersionManager
+                    content = VersionManager.get_version(project_id, ch_num, ver_num)
+                    if content is None:
+                        return "", f"❌ {t('version.no_versions')}"
+                    return content, f"✅ Đang xem phiên bản {ver_num}"
+                except Exception as e:
+                    return "", f"❌ {str(e)}"
+
+            def on_version_rollback(version_entry, chapter_label, project_id):
+                """Khôi phục chương về phiên bản được chọn."""
+                if not version_entry or not chapter_label or not project_id:
+                    return f"❌ {t('version.no_chapter')}", gr.update()
+                ch_num = _parse_chapter_num(chapter_label)
+                if ch_num is None:
+                    return f"❌ {t('version.no_chapter')}", gr.update()
+                try:
+                    ver_num = int(version_entry.split("—")[0].replace("v", "").strip())
+                    from services.version_manager import VersionManager
+                    ok = VersionManager.rollback(project_id, ch_num, ver_num)
+                    if ok:
+                        # Làm mới danh sách phiên bản sau khi khôi phục
+                        new_versions = VersionManager.list_versions(project_id, ch_num)
+                        choices = [
+                            t("version.version_entry", version=v["version"], words=v["word_count"],
+                              date=v["created_at"][:16] if v["created_at"] else "")
+                            for v in new_versions
+                        ]
+                        return t("version.rollback_success", version=ver_num), gr.update(choices=choices, value=choices[0] if choices else None)
+                    return f"❌ {t('version.rollback_failed')}", gr.update()
+                except Exception as e:
+                    return f"❌ {str(e)}", gr.update()
+
             editor_project_selector.change(
                 fn=on_editor_project_select,
                 inputs=[editor_project_selector],
@@ -141,6 +224,23 @@ def build_projects_tab():
                 fn=on_editor_save,
                 inputs=[editor_chapter_selector, editor_textbox, editor_project_id],
                 outputs=[editor_status]
+            )
+
+            # Cập nhật danh sách phiên bản khi chọn chương
+            editor_chapter_selector.change(
+                fn=on_version_chapter_select,
+                inputs=[editor_chapter_selector, editor_project_id],
+                outputs=[version_dropdown]
+            )
+            version_view_btn.click(
+                fn=on_version_view,
+                inputs=[version_dropdown, editor_chapter_selector, editor_project_id],
+                outputs=[version_content, version_status]
+            )
+            version_rollback_btn.click(
+                fn=on_version_rollback,
+                inputs=[version_dropdown, editor_chapter_selector, editor_project_id],
+                outputs=[version_status, version_dropdown]
             )
 
         refresh_projects_btn.click(fn=on_refresh_projects, outputs=[projects_table, delete_project_selector])
