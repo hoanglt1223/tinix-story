@@ -3,21 +3,44 @@
 /* Import Google Fonts */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
 
+/* ===== Light Mode (default) ===== */
 :root {
     --primary-color: #6366f1;
     --primary-hover: #4f46e5;
     --secondary-color: #64748b;
     --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
     --card-bg: rgba(255, 255, 255, 0.85);
+    --text-primary: #1e293b;
+    --text-secondary: #64748b;
+    --border-color: rgba(0, 0, 0, 0.1);
+    --input-bg: rgba(255, 255, 255, 0.9);
     --border-radius-lg: 16px;
     --border-radius-md: 12px;
     --shadow-soft: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
     --shadow-hover: 0 20px 30px -10px rgba(0, 0, 0, 0.1);
+    --focus-ring: rgba(99, 102, 241, 0.1);
+}
+
+/* ===== Dark Mode ===== */
+.dark-mode {
+    --primary-color: #818cf8;
+    --primary-hover: #6366f1;
+    --secondary-color: #94a3b8;
+    --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    --card-bg: rgba(30, 41, 59, 0.85);
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --input-bg: rgba(15, 23, 42, 0.9);
+    --shadow-soft: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+    --shadow-hover: 0 20px 30px -10px rgba(0, 0, 0, 0.4);
+    --focus-ring: rgba(129, 140, 248, 0.2);
 }
 
 body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
     background: var(--bg-gradient) !important;
+    color: var(--text-primary) !important;
     min-height: 100vh;
 }
 
@@ -27,6 +50,7 @@ h3 {
     font-family: 'Outfit', sans-serif !important;
     font-weight: 700 !important;
     letter-spacing: -0.02em !important;
+    color: var(--text-primary) !important;
 }
 
 /* Header Styling */
@@ -46,7 +70,7 @@ h3 {
 .gr-form {
     background-color: var(--card-bg) !important;
     backdrop-filter: blur(12px) !important;
-    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    border: 1px solid var(--border-color) !important;
     border-radius: var(--border-radius-lg) !important;
     box-shadow: var(--shadow-soft) !important;
     transition: all 0.3s ease !important;
@@ -69,7 +93,7 @@ h3 {
 .tab-nav {
     display: flex !important;
     justify-content: center !important;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+    border-bottom: 1px solid var(--border-color) !important;
     margin-bottom: 1.5rem !important;
 }
 
@@ -114,16 +138,33 @@ textarea,
 input[type="text"],
 input[type="number"] {
     border-radius: var(--border-radius-md) !important;
-    border: 1px solid rgba(0, 0, 0, 0.1) !important;
+    border: 1px solid var(--border-color) !important;
     padding: 0.75rem !important;
-    background-color: rgba(255, 255, 255, 0.9) !important;
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
     transition: border-color 0.2s ease !important;
 }
 
 textarea:focus,
 input[type="text"]:focus {
     border-color: var(--primary-color) !important;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1) !important;
+    box-shadow: 0 0 0 3px var(--focus-ring) !important;
+}
+
+/* Dark mode specific: labels, markdown, dropdowns */
+.dark-mode label,
+.dark-mode .gr-markdown,
+.dark-mode .gr-textbox label,
+.dark-mode p,
+.dark-mode span {
+    color: var(--text-primary) !important;
+}
+
+.dark-mode select,
+.dark-mode .gr-dropdown {
+    background-color: var(--input-bg) !important;
+    color: var(--text-primary) !important;
+    border-color: var(--border-color) !important;
 }
 
 /* Micro-animations */

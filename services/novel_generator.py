@@ -1343,6 +1343,51 @@ def load_chapter_summaries(project_id: str) -> Tuple[List[Dict], str]:
         return [], t("generator.summary_load_failed", error=str(e))
 
 
+def batch_generate_summaries(project_id: str):
+    """
+    Sinh tóm tắt hàng loạt cho tất cả chương có nội dung nhưng chưa có tóm tắt.
+    Generator function yield progress strings.
+    """
+    conn = get_db()
+    # Lấy chương có content
+    chapters = conn.execute(
+        "SELECT num, title, content FROM chapters WHERE project_id = ? AND content != '' ORDER BY num",
+        (project_id,)
+    ).fetchall()
+    if not chapters:
+        yield "❌ No chapters with content found."
+        return
+
+    # Lấy chương đã có summary
+    existing = set()
+    rows = conn.execute(
+        "SELECT chapter_num FROM chapter_summaries WHERE project_id = ?", (project_id,)
+    ).fetchall()
+    for r in rows:
+        existing.add(r["chapter_num"])
+
+    total = len(chapters)
+    generated = 0
+    skipped = 0
+
+    for ch in chapters:
+        if ch["num"] in existing:
+            skipped += 1
+            yield f"⏭ Chapter {ch['num']}/{total}: already has summary (skipped)"
+            continue
+
+        yield f"⏳ Summarizing chapter {ch['num']}/{total}: {ch['title']}..."
+        summary, msg = generate_chapter_summary(ch["content"], ch["title"])
+        if summary:
+            save_chapter_summary(project_id, ch["num"], summary)
+            generated += 1
+            yield f"✅ Chapter {ch['num']}/{total}: done"
+        else:
+            yield f"❌ Chapter {ch['num']}/{total}: {msg}"
+
+    yield f"\n🎉 Batch complete! Generated: {generated}, Skipped: {skipped}, Total: {total}"
+
+
 def build_context_from_summaries(summaries: List[Dict], max_context_length: int = 1000) -> str:
     """
     Xây dựng bối cảnh từ tóm tắt

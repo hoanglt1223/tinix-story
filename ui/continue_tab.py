@@ -2,7 +2,7 @@ import gradio as gr
 from datetime import datetime
 from locales.i18n import t
 from services.project_manager import ProjectManager, list_project_titles
-from services.novel_generator import Chapter
+from services.novel_generator import Chapter, batch_generate_summaries
 from services.style_manager import StyleManager
 from core.state import app_state
 import logging
@@ -24,6 +24,11 @@ def build_continue_tab():
                     )
                 with gr.Column(scale=1, min_width=100):
                     refresh_continue_btn = gr.Button(t("continue_tab.load_btn"), size="lg")
+
+        with gr.Accordion(f"📝 {t('continue_tab.batch_summary_header')}", open=False):
+            with gr.Row():
+                batch_summary_btn = gr.Button(t("continue_tab.batch_summary_btn"), variant="secondary", scale=1)
+            batch_summary_progress = gr.Textbox(label=t("continue_tab.summary_progress"), interactive=False, lines=8)
 
         with gr.Accordion("⚙️ 2. Thông tin & Cài đặt", open=False):
             with gr.Row():
@@ -91,7 +96,7 @@ def build_continue_tab():
             try:
                 project_data = ProjectManager.get_project_by_title(project_title)
                 if not project_data:
-                    return f"❌ {t('continue_tab.project_not_found')}", 1, "Chưa tải dự án..."
+                    return f"❌ {t('continue_tab.project_not_found')}", 1, "Chưa tải dự án...", []
 
                 project_id = project_data.get("id")
                 project, msg = ProjectManager.load_project(project_id)
@@ -162,10 +167,8 @@ def build_continue_tab():
             gen = app_state.get_generator()
             if selected_style:
                 gen.config.generation.writing_style = selected_style
-
-            gen = app_state.get_generator()
             project = app_state.current_project
-            
+
             # Check if the requested chapter exists in the outline
             if not any(int(ch.num) == int(ch_num) for ch in project.chapters):
                 yield f"❌ Lỗi: Chương {int(ch_num)} không có trong dàn ý. Tab này chỉ hỗ trợ hoàn thành nốt nội dung dàn ý đã có, không viết thêm chương mới.", "", gr.update(interactive=True), gr.update(), gr.update()
@@ -254,8 +257,6 @@ def build_continue_tab():
             gen = app_state.get_generator()
             if selected_style:
                 gen.config.generation.writing_style = selected_style
-
-            gen = app_state.get_generator()
             project = app_state.current_project
             app_state.is_generating = True
             app_state.stop_requested = False
@@ -350,6 +351,25 @@ def build_continue_tab():
         def on_continue_stop():
             app_state.stop_requested = True
             return "⏸️ Đang dừng..."
+
+        def on_batch_summary(project_title):
+            if not project_title:
+                yield "❌ Please select a project first."
+                return
+            project_data = ProjectManager.get_project_by_title(project_title)
+            if not project_data:
+                yield "❌ Project not found."
+                return
+            results = []
+            for msg in batch_generate_summaries(project_data["id"]):
+                results.append(msg)
+                yield "\n".join(results)
+
+        batch_summary_btn.click(
+            fn=on_batch_summary,
+            inputs=[continue_project_selector],
+            outputs=[batch_summary_progress]
+        )
 
         refresh_continue_btn.click(
             fn=on_refresh_continue, 

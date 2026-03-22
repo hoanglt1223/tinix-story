@@ -60,7 +60,17 @@ def create_main_ui():
         with open(css_path, 'r', encoding='utf-8') as f:
             custom_css = f.read()
 
-    with gr.Blocks(title=t("app.title")) as app:
+    # Đọc theme preference từ DB, inject JS vào CSS để apply dark mode on load
+    theme_js = ""
+    try:
+        conn = get_db()
+        theme_row = conn.execute("SELECT value FROM config WHERE key = 'theme'").fetchone()
+        if theme_row and theme_row["value"] == "Dark":
+            theme_js = '<script>document.addEventListener("DOMContentLoaded",function(){document.body.classList.add("dark-mode")});</script>'
+    except Exception:
+        pass
+
+    with gr.Blocks(title=t("app.title"), css=custom_css, head=theme_js) as app:
         # Header
         gr.Markdown(f"""
         <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; margin-bottom: 20px;">
@@ -105,13 +115,6 @@ def main():
 
     # Tạo UI
     app = create_main_ui()
-
-    # Tải CSS
-    custom_css = ""
-    css_path = Path("custom.css")
-    if css_path.exists():
-        with open(css_path, 'r', encoding='utf-8') as f:
-            custom_css = f.read()
 
     # Khởi động
     logger.info(t("app.gradio_start", port=WEB_PORT))

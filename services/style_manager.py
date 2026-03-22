@@ -3,6 +3,7 @@ import json
 import logging
 from typing import Dict, List, Optional
 from locales.i18n import t
+from services.api_client import get_api_client
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +119,42 @@ class StyleManager:
         if len(styles) < initial_length:
             return cls.save_styles(styles)
         return False
+
+    @classmethod
+    def analyze_style(cls, text: str) -> Dict[str, str]:
+        """Phân tích phong cách viết từ đoạn văn bản mẫu bằng AI"""
+        if not text or not text.strip():
+            return {"error": "Text is empty"}
+        try:
+            api_client = get_api_client()
+            prompt = (
+                "Analyze the following text and describe the writing style. "
+                "Output ONLY a valid JSON object with exactly two keys:\n"
+                '- "name": a short style name (max 50 chars)\n'
+                '- "description": detailed style description covering tone, vocabulary, sentence structure, pacing, emotional register\n\n'
+                f"Text to analyze:\n{text[:5000]}"
+            )
+            messages = [
+                {"role": "system", "content": "You are a literary style analyst. Always respond with valid JSON only."},
+                {"role": "user", "content": prompt}
+            ]
+            success, response = api_client.generate(messages, use_cache=False)
+            if not success or not response:
+                return {"error": response or "AI generation failed"}
+
+            # Trích xuất JSON từ response
+            response = response.strip()
+            if response.startswith("```"):
+                response = response.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
+            result = json.loads(response)
+            if "name" in result and "description" in result:
+                return result
+            return {"error": "Invalid AI response format"}
+        except json.JSONDecodeError:
+            return {"error": "Failed to parse AI response as JSON"}
+        except Exception as e:
+            logger.error(f"Analyze style failed: {e}")
+            return {"error": str(e)}
 
     @classmethod
     def get_style_names(cls) -> List[str]:

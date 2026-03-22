@@ -466,3 +466,86 @@ def build_settings_tab():
                 style_add_btn.click(fn=on_style_add, inputs=[style_name_input, style_desc_input], outputs=[style_op_status, style_select])
                 style_update_btn.click(fn=on_style_update, inputs=[style_select, style_name_input, style_desc_input], outputs=[style_op_status, style_select])
                 style_delete_btn.click(fn=on_style_delete, inputs=[style_select], outputs=[style_op_status, style_select])
+
+            # Sub-tab: AI Style Analyzer
+            with gr.Tab(t("settings.style_analyzer_header")):
+                gr.Markdown(f"#### {t('settings.style_analyzer_desc')}")
+                analyzer_text_input = gr.Textbox(
+                    label=t("settings.analyzer_paste_text"),
+                    placeholder=t("settings.analyzer_paste_placeholder"),
+                    lines=10
+                )
+                analyzer_btn = gr.Button(t("settings.analyze_style_btn"), variant="primary")
+                analyzer_result_name = gr.Textbox(label=t("settings.analyzer_result_name"), interactive=True)
+                analyzer_result_desc = gr.Textbox(label=t("settings.analyzer_result_desc"), interactive=True, lines=4)
+                analyzer_save_btn = gr.Button(t("settings.save_style_btn"), variant="secondary")
+                analyzer_status = gr.Textbox(label=t("settings.operation_result"), interactive=False)
+
+                def on_analyze_style(text):
+                    if not text or not text.strip():
+                        return "", "", "❌ Please paste some text first"
+                    result = StyleManager.analyze_style(text)
+                    if "error" in result:
+                        return "", "", f"❌ {result['error']}"
+                    return result.get("name", ""), result.get("description", ""), "✅ Analysis complete"
+
+                def on_save_analyzed_style(name, description):
+                    if not name or not name.strip():
+                        return "❌ Style name is empty"
+                    success = StyleManager.add_style(name.strip(), description.strip())
+                    if success:
+                        return f"✅ Style '{name}' saved successfully"
+                    return "❌ Style name already exists or save failed"
+
+                analyzer_btn.click(
+                    fn=on_analyze_style,
+                    inputs=[analyzer_text_input],
+                    outputs=[analyzer_result_name, analyzer_result_desc, analyzer_status]
+                )
+                analyzer_save_btn.click(
+                    fn=on_save_analyzed_style,
+                    inputs=[analyzer_result_name, analyzer_result_desc],
+                    outputs=[analyzer_status]
+                )
+
+            # Sub-tab: Theme / Dark Mode
+            with gr.Tab(t("settings.tab_theme")):
+                gr.Markdown(f"#### {t('settings.theme_header')}")
+
+                # Đọc theme hiện tại từ config
+                from core.database import get_db as _get_db
+                def _read_current_theme():
+                    try:
+                        row = _get_db().execute("SELECT value FROM config WHERE key = 'theme'").fetchone()
+                        return row["value"] if row else "Light"
+                    except Exception:
+                        return "Light"
+
+                theme_toggle = gr.Radio(
+                    choices=["Light", "Dark"],
+                    value=_read_current_theme(),
+                    label=t("settings.theme_label"),
+                    interactive=True
+                )
+                theme_status = gr.Textbox(label=t("settings.operation_result"), interactive=False)
+
+                def on_theme_change(theme_value):
+                    try:
+                        conn = _get_db()
+                        from datetime import datetime as _dt
+                        now = _dt.now().isoformat()
+                        conn.execute(
+                            "INSERT OR REPLACE INTO config (key, value, updated_at) VALUES (?, ?, ?)",
+                            ("theme", theme_value, now)
+                        )
+                        conn.commit()
+                    except Exception as e:
+                        return f"❌ {e}"
+                    return f"✅ Theme set to {theme_value}"
+
+                theme_toggle.change(
+                    fn=on_theme_change,
+                    inputs=[theme_toggle],
+                    outputs=[theme_status],
+                    js="(v) => { if(v==='Dark') document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode'); return v; }"
+                )

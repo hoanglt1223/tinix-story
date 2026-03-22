@@ -255,6 +255,40 @@ class ProjectManager:
         return None
 
     @staticmethod
+    def update_chapter_content(project_id: str, chapter_num: int, content: str) -> Tuple[bool, str]:
+        """Cập nhật nội dung chương trong DB"""
+        try:
+            conn = get_db()
+            word_count = len(content.split()) if content else 0
+            now = datetime.now().isoformat()
+            cursor = conn.execute(
+                "UPDATE chapters SET content = ?, word_count = ?, generated_at = ? WHERE project_id = ? AND num = ?",
+                (content, word_count, now, project_id, chapter_num)
+            )
+            conn.commit()
+            if cursor.rowcount == 0:
+                return False, t("project_manager.chapter_not_found")
+            logger.info(f"Chapter {chapter_num} updated for project {project_id}")
+            return True, t("project_manager.chapter_update_success")
+        except Exception as e:
+            logger.error(f"Update chapter content failed: {e}")
+            return False, str(e)
+
+    @staticmethod
+    def get_chapter_list(project_id: str) -> List[Dict]:
+        """Lấy danh sách chương của dự án"""
+        try:
+            conn = get_db()
+            rows = conn.execute(
+                "SELECT num, title, content, word_count FROM chapters WHERE project_id = ? ORDER BY num",
+                (project_id,)
+            ).fetchall()
+            return [{"num": r["num"], "title": r["title"], "content": r["content"] or "", "word_count": r["word_count"]} for r in rows]
+        except Exception as e:
+            logger.error(f"Get chapter list failed: {e}")
+            return []
+
+    @staticmethod
     def delete_project(project_id: str) -> Tuple[bool, str]:
         """
         Xóa dự án từ SQLite

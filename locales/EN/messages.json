@@ -209,7 +209,10 @@
         "project_not_found": "❌ Project not found",
         "load_failed": "❌ Failed to load project: {error}",
         "no_outline": "❌ Project has no outline. Please use the create tab first.",
-        "continue_starting": "▶️ Resuming generation from chapter {chapter}..."
+        "continue_starting": "▶️ Resuming generation from chapter {chapter}...",
+        "batch_summary_header": "Batch Chapter Summaries",
+        "batch_summary_btn": "📝 Generate All Summaries",
+        "summary_progress": "Summary Progress"
     },
     "projects": {
         "header": "### Manage All Projects",
@@ -246,7 +249,14 @@
         "illustration_label": "Chapter Illustration",
         "select_chapter": "Please select a chapter",
         "invalid_chapter": "Invalid chapter",
-        "chapter_not_found": "Chapter not found"
+        "chapter_not_found": "Chapter not found",
+        "editor_header": "Chapter Editor",
+        "editor_content": "Chapter Content",
+        "editor_select_chapter": "Select Chapter",
+        "save_chapter": "💾 Save Chapter",
+        "save_success": "Chapter saved successfully",
+        "word_count": "Word Count",
+        "select_project": "Select Project"
     },
     "settings": {
         "header": "### 🔧 API Configuration & Generation Parameters",
@@ -372,7 +382,18 @@
         "sub_genre_update_success": "Sub-theme updated successfully!",
         "sub_genre_err_update": "Error updating or name conflict!",
         "sub_genre_delete_success": "Sub-theme deleted successfully!",
-        "sub_genre_err_delete": "Deletion failed!"
+        "sub_genre_err_delete": "Deletion failed!",
+        "style_analyzer_header": "🔍 AI Style Analyzer",
+        "style_analyzer_desc": "Paste a text sample and AI will analyze the writing style",
+        "analyzer_paste_text": "Paste sample text",
+        "analyzer_paste_placeholder": "Paste a text excerpt (500-10000 words) to analyze its writing style...",
+        "analyze_style_btn": "🔍 Analyze Style",
+        "analyzer_result_name": "Detected Style Name",
+        "analyzer_result_desc": "Style Description",
+        "save_style_btn": "💾 Save as Custom Style",
+        "tab_theme": "🎨 Theme",
+        "theme_header": "Dark Mode / Light Mode",
+        "theme_label": "Theme"
     },
     "about": {
         "content": "# TiniX Story 1.0\n## Production-ready Intelligent Novel Generation System\n\n### 🌟 Core Features\n- **Smart Creation**: Write novels from scratch with custom outlines.\n- **Resume Capability**: Supports pausing. Saves every chapter automatically, can be resumed in Project Management.\n- **Smart Rewrite**: Upload text, rewrite using 17 preset high-quality styles.\n- **Smart Continue**: Upload partially written novels; AI will automatically resume writing.\n- **Novel Polish**: Polishing tools with 8 modes like full edit, finding errors, removing AI tone, etc.\n- **Flexible Parsing**: Supports custom chapter templates, reads varied formats.\n- **Multi-Format Export**: Word, TXT, Markdown, HTML ready for download.\n- **Project Management**: Control multiple projects, track progress, auto-save states.\n- **Flexible Configuration**: Use multiple APIs, fine-tune writing parameters.\n- **Error Retry**: Retries automatically if a generated chapter has 0 words.\n- **Port Auto-detection**: Finds an available port if the default is in use.\n\n### 🔧 Tech Specs\n- **Error Recovery**: Robust error handling & logging.\n- **Caching**: Smart cache saves repeated API calls.\n- **Rate Limiting**: Built-in token bucket to prevent rate limits.\n- **Load Balancing**: Auto round-robin for backends.\n- **Performance**: Thread-safe concurrency.\n\n### ⚖️ License\nMIT License"
@@ -624,7 +645,9 @@
         "delete_not_found": "Project not found: {id}",
         "delete_failed": "Delete failed: {error}",
         "export_success": "Exported to: {filepath}",
-        "export_failed": "Export failed: {error}"
+        "export_failed": "Export failed: {error}",
+        "chapter_not_found": "Chapter not found",
+        "chapter_update_success": "Chapter updated successfully"
     },
     "ui": {
         "col_project_name": "Project Name",
