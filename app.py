@@ -70,7 +70,10 @@ def create_main_ui():
     except Exception:
         pass
 
-    with gr.Blocks(title=t("app.title"), css=custom_css, head=theme_js) as app:
+    with gr.Blocks(title=t("app.title")) as app:
+        # Inject custom CSS + dark mode JS
+        gr.HTML(f"<style>{custom_css}</style>{theme_js}", visible=False)
+
         # Header
         gr.Markdown(f"""
         <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; margin-bottom: 20px;">
@@ -109,16 +112,19 @@ def create_main_ui():
 
 # ==================== Khởi động ứng dụng ====================
 
-# Module-level app instance (required by Vercel/ASGI deployments)
-app = create_main_ui()
-app.queue(default_concurrency_limit=10)
+# Module-level Gradio instance
+_gradio_app = create_main_ui()
+_gradio_app.queue(default_concurrency_limit=10)
+
+# ASGI app for Vercel/serverless deployments
+app = _gradio_app.app
 
 
 def main():
     """Khởi động ứng dụng (local/Docker)"""
     logger.info(t("app.startup_log"))
     logger.info(t("app.gradio_start", port=WEB_PORT))
-    app.launch(
+    _gradio_app.launch(
         server_name=WEB_HOST,
         server_port=WEB_PORT,
         share=WEB_SHARE,

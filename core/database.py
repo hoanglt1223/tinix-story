@@ -14,10 +14,15 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 DB_DIR = "data"
+# Kiểm tra writable filesystem; nếu read-only (Vercel) → dùng /tmp
 try:
     os.makedirs(DB_DIR, exist_ok=True)
+    # Test ghi thực tế (thư mục có thể tồn tại nhưng read-only)
+    _test_file = os.path.join(DB_DIR, ".write_test")
+    with open(_test_file, "w") as f:
+        f.write("ok")
+    os.remove(_test_file)
 except OSError:
-    # Read-only filesystem (Vercel serverless) — use /tmp
     DB_DIR = os.path.join("/tmp", "data")
     os.makedirs(DB_DIR, exist_ok=True)
 DB_FILE = os.path.join(DB_DIR, "tinix_story.db")
