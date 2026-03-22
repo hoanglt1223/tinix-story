@@ -117,7 +117,8 @@ _gradio_app = create_main_ui()
 _gradio_app.queue(default_concurrency_limit=10)
 
 # ASGI app for Vercel/serverless deployments
-app = _gradio_app.app
+from fastapi import FastAPI
+app = gr.mount_gradio_app(FastAPI(), _gradio_app, path="/")
 
 
 def main():
