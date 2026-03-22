@@ -322,6 +322,114 @@ def build_create_tab():
             app_state.stop_requested = True
             return "⏸️ Đang dừng..."
 
+        # === Bulk Import Section ===
+        with gr.Accordion(f"📂 {t('bulk_import.header')}", open=False):
+            gr.Markdown(t("bulk_import.description"))
+            bulk_files = gr.File(
+                label=t("bulk_import.upload_label"),
+                file_count="multiple",
+                file_types=[".txt", ".epub", ".pdf", ".md", ".docx"]
+            )
+            bulk_mode = gr.Radio(
+                choices=[t("bulk_import.mode_separate"), t("bulk_import.mode_merge")],
+                value=t("bulk_import.mode_separate"),
+                label=t("bulk_import.mode_label")
+            )
+            bulk_merge_title = gr.Textbox(
+                label=t("bulk_import.merge_title_label"),
+                placeholder=t("bulk_import.merge_title_placeholder"),
+                visible=False
+            )
+            bulk_import_btn = gr.Button(t("bulk_import.import_btn"), variant="primary")
+            bulk_import_status = gr.Textbox(label=t("bulk_import.status_label"), interactive=False, lines=8)
+
+            def on_bulk_mode_change(mode):
+                return gr.update(visible=(mode == t("bulk_import.mode_merge")))
+
+            def on_bulk_import(files, mode, merge_title):
+                if not files:
+                    return f"❌ {t('bulk_import.no_files')}"
+
+                try:
+                    from utils.file_parser import parse_novel_file
+
+                    results = []
+                    is_merge = (mode == t("bulk_import.mode_merge"))
+
+                    if is_merge:
+                        # Gộp tất cả file thành một dự án
+                        combined_title = merge_title.strip() if merge_title and merge_title.strip() else "Merged Novel"
+                        all_chapters = []
+                        ch_num = 1
+                        for f in files:
+                            file_path = f.name if hasattr(f, 'name') else f
+                            paragraphs, parse_msg = parse_novel_file(file_path)
+                            if paragraphs:
+                                content = "\n\n".join(paragraphs)
+                                import os
+                                file_name = os.path.basename(file_path)
+                                all_chapters.append({
+                                    "num": ch_num,
+                                    "title": file_name,
+                                    "desc": "",
+                                    "content": content,
+                                    "word_count": len(content)
+                                })
+                                ch_num += 1
+                                results.append(f"✅ {file_name}: {len(paragraphs)} đoạn")
+                            else:
+                                import os
+                                results.append(f"❌ {os.path.basename(file_path)}: {parse_msg}")
+
+                        if all_chapters:
+                            success, msg = ProjectManager.create_project_from_import(
+                                title=combined_title,
+                                genre="",
+                                sub_genres=[],
+                                character_setting="",
+                                world_setting="",
+                                plot_idea="",
+                                chapters=all_chapters
+                            )
+                            results.append(f"\n{'✅' if success else '❌'} {msg}")
+                    else:
+                        # Mỗi file thành một dự án riêng
+                        for f in files:
+                            file_path = f.name if hasattr(f, 'name') else f
+                            import os
+                            file_name = os.path.basename(file_path)
+                            paragraphs, parse_msg = parse_novel_file(file_path)
+                            if not paragraphs:
+                                results.append(f"❌ {file_name}: {parse_msg}")
+                                continue
+
+                            content = "\n\n".join(paragraphs)
+                            proj_title = os.path.splitext(file_name)[0]
+                            chapters_data = [{"num": 1, "title": proj_title, "desc": "", "content": content, "word_count": len(content)}]
+                            success, msg = ProjectManager.create_project_from_import(
+                                title=proj_title,
+                                genre="",
+                                sub_genres=[],
+                                character_setting="",
+                                world_setting="",
+                                plot_idea="",
+                                chapters=chapters_data
+                            )
+                            results.append(f"{'✅' if success else '❌'} {file_name}: {msg}")
+
+                    return "\n".join(results)
+
+                except Exception as e:
+                    logger.error(f"Bulk import failed: {e}", exc_info=True)
+                    return f"❌ {t('bulk_import.import_failed', error=str(e))}"
+
+            bulk_mode.change(fn=on_bulk_mode_change, inputs=[bulk_mode], outputs=[bulk_merge_title])
+            bulk_import_btn.click(
+                fn=on_bulk_import,
+                inputs=[bulk_files, bulk_mode, bulk_merge_title],
+                outputs=[bulk_import_status]
+            )
+
         # Bind events
         suggest_title_btn.click(
             fn=on_suggest_title,

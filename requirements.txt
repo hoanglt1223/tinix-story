@@ -7,5 +7,7 @@ libsql-experimental>=0.0.45  # Turso/libSQL database (SQLite-compatible)
 
 # Dependencies tùy chọn (Sử dụng cho phân tích file)
 PyMuPDF>=1.23.0  # Hỗ trợ PDF
-ebooklib>=0.18  # Hỗ trợ EPUB
+ebooklib>=0.18  # Hỗ trợ EPUB import/export
 beautifulsoup4>=4.12.0  # Hỗ trợ EPUB
+markdown>=3.4.0  # Hỗ trợ xuất HTML
+weasyprint>=60.0  # Hỗ trợ xuất PDF (tùy chọn)

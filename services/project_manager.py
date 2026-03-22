@@ -312,6 +312,65 @@ class ProjectManager:
             return False, t("project_manager.delete_failed", error=str(e))
     
     @staticmethod
+    def create_project_from_import(
+        title: str,
+        genre: str,
+        sub_genres: List[str],
+        character_setting: str,
+        world_setting: str,
+        plot_idea: str,
+        chapters: List[Dict]
+    ) -> Tuple[bool, str]:
+        """
+        Tạo dự án từ dữ liệu import (EPUB hoặc archive ZIP)
+
+        Args:
+            title: Tiêu đề dự án
+            genre: Thể loại
+            sub_genres: Danh sách thể loại con
+            character_setting: Thiết lập nhân vật
+            world_setting: Thế giới quan
+            plot_idea: Ý tưởng cốt truyện
+            chapters: Danh sách dict chương {'num', 'title', 'content', ...}
+
+        Returns:
+            (Thành công, thông tin trạng thái)
+        """
+        try:
+            project, msg = ProjectManager.create_project(
+                title=title,
+                genre=genre,
+                sub_genres=sub_genres,
+                character_setting=character_setting,
+                world_setting=world_setting,
+                plot_idea=plot_idea
+            )
+            if not project:
+                return False, msg
+
+            # Thêm chapters
+            for ch_data in chapters:
+                chapter = Chapter(
+                    num=ch_data.get("num", 0),
+                    title=ch_data.get("title", ""),
+                    desc=ch_data.get("desc", ""),
+                    content=ch_data.get("content", ""),
+                    word_count=ch_data.get("word_count") or len(ch_data.get("content", "")),
+                    generated_at=ch_data.get("generated_at", datetime.now().isoformat())
+                )
+                project.chapters.append(chapter)
+
+            success, save_msg = ProjectManager.save_project(project)
+            if success:
+                logger.info(f"Project imported: {title} ({len(chapters)} chapters)")
+                return True, t("project_manager.import_success", title=title, count=len(chapters))
+            return False, save_msg
+
+        except Exception as e:
+            logger.error(f"Project import failed: {e}")
+            return False, t("project_manager.import_failed", error=str(e))
+
+    @staticmethod
     def export_project(project: NovelProject, export_format: str = "json") -> Tuple[Optional[str], str]:
         """
         Xuất cấu hình dự án (để chia sẻ hoặc sao lưu)

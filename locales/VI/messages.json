@@ -274,6 +274,8 @@
         "export_format_txt": "Văn bản (.txt)",
         "export_format_md": "Markdown (.md)",
         "export_format_html": "HTML (.html)",
+        "export_format_epub": "EPUB (.epub)",
+        "export_format_pdf": "PDF (.pdf)",
         "export_progress_btn": "📥 Xuất tiến độ hiện tại",
         "download_file": "Tải xuống tệp",
         "export_status": "Trạng thái xuất",
@@ -713,7 +715,9 @@
         "generated_date": "Ngày tạo: {date}",
         "first_chapter": "Chương một",
         "body_font": "Times New Roman",
-        "title_font": "Arial"
+        "title_font": "Arial",
+        "missing_ebooklib": "Chưa cài ebooklib. Chạy: pip install ebooklib",
+        "missing_weasyprint": "Chưa cài weasyprint. Chạy: pip install weasyprint"
     },
     "config_api": {
         "name_required": "Tên giao diện không được để trống",
@@ -756,7 +760,9 @@
         "export_success": "Xuất dự án thành công: {filepath}",
         "export_failed": "Xuất dự án thất bại: {error}",
         "chapter_not_found": "Không tìm thấy chương",
-        "chapter_update_success": "Đã cập nhật chương thành công"
+        "chapter_update_success": "Đã cập nhật chương thành công",
+        "import_success": "Đã import dự án '{title}' ({count} chương)",
+        "import_failed": "Import thất bại: {error}"
     },
     "ui": {
         "col_project_name": "Tên dự án",
@@ -882,7 +888,8 @@
         "word_count_positive": "Số chữ phải lớn hơn 0",
         "invalid_regex": "Biểu thức chính quy không hợp lệ: {error}",
         "file_not_exist": "Tệp không tồn tại: {path}",
-        "upload_read_failed": "Đọc tệp tải lên thất bại: {error}"
+        "upload_read_failed": "Đọc tệp tải lên thất bại: {error}",
+        "epub_structured_complete": "Đã phân tích EPUB: {count} chương từ '{title}'"
     },
     "config": {
         "backend_name_empty": "Tên backend không được để trống",
@@ -912,5 +919,53 @@
         "config_file_missing": "File cấu hình không tồn tại: {path}",
         "config_format_unsupported": "Định dạng cấu hình không được hỗ trợ: {ext}",
         "default_backend_name": "Ollama Cục bộ"
+    },
+    "epub_import": {
+        "header": "Import EPUB",
+        "description": "Import file EPUB thành dự án mới. Các chương sẽ được tự động phát hiện từ mục lục.",
+        "upload_label": "Tải lên file EPUB (.epub)",
+        "genre_label": "Thể loại (Tùy chọn)",
+        "genre_placeholder": "Ví dụ: Tiên hiệp, Ngôn tình...",
+        "import_btn": "Import EPUB",
+        "preview_label": "Xem trước chương đã phát hiện",
+        "status_label": "Trạng thái import",
+        "no_file": "Vui lòng tải lên file EPUB",
+        "detected_title": "Tiêu đề",
+        "detected_author": "Tác giả",
+        "detected_chapters": "Số chương",
+        "import_failed": "Import thất bại: {error}"
+    },
+    "archive": {
+        "header": "Kho lưu trữ dự án",
+        "description": "Xuất dự án thành file ZIP để sao lưu hoặc chia sẻ. Import kho lưu trữ để khôi phục dự án.",
+        "select_project": "Chọn dự án để lưu trữ",
+        "export_btn": "Xuất kho lưu trữ (.zip)",
+        "export_status": "Trạng thái xuất",
+        "download_label": "Tải xuống kho lưu trữ",
+        "import_label": "Import kho lưu trữ (.zip)",
+        "import_btn": "Import kho lưu trữ",
+        "import_status": "Trạng thái import",
+        "no_file": "Vui lòng tải lên file ZIP",
+        "project_not_found": "Không tìm thấy dự án: {id}",
+        "export_success": "Đã xuất kho lưu trữ: {filename} ({count} chương)",
+        "export_failed": "Xuất kho lưu trữ thất bại: {error}",
+        "import_success": "Đã import dự án '{title}' thành công ({count} chương)",
+        "import_failed": "Import thất bại: {error}",
+        "file_not_found": "Không tìm thấy file: {path}",
+        "invalid_archive": "Kho lưu trữ không hợp lệ: thiếu metadata.json"
+    },
+    "bulk_import": {
+        "header": "Import hàng loạt",
+        "description": "Import nhiều file cùng lúc. Mỗi file có thể thành một dự án riêng, hoặc gộp tất cả thành một dự án.",
+        "upload_label": "Tải lên các file (txt/epub/pdf/md/docx)",
+        "mode_label": "Chế độ import",
+        "mode_separate": "Mỗi file = một dự án riêng",
+        "mode_merge": "Gộp tất cả file thành một dự án",
+        "merge_title_label": "Tiêu đề dự án gộp",
+        "merge_title_placeholder": "Nhập tiêu đề cho dự án được gộp",
+        "import_btn": "Import các file",
+        "status_label": "Kết quả import",
+        "no_files": "Vui lòng tải lên ít nhất một file",
+        "import_failed": "Import thất bại: {error}"
     }
 }

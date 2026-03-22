@@ -387,6 +387,164 @@ def export_to_html(novel_text: str, title: str) -> Tuple[Optional[str], str]:
         return None, t("exporter.export_failed", error=str(e))
 
 
+def export_to_epub(novel_text: str, title: str, author: str = "TiniX Story") -> Tuple[Optional[str], str]:
+    """
+    Xuất ra định dạng EPUB
+
+    Args:
+        novel_text: Văn bản tiểu thuyết (định dạng Markdown)
+        title: Tiêu đề tiểu thuyết
+        author: Tên tác giả
+
+    Returns:
+        (Đường dẫn tệp, thông tin trạng thái)
+    """
+    try:
+        from ebooklib import epub
+    except ImportError:
+        return None, t("exporter.missing_ebooklib")
+
+    try:
+        if not novel_text.strip():
+            return None, t("exporter.no_content")
+
+        chapters = _extract_chapters_from_markdown(novel_text)
+        if not chapters:
+            return None, t("exporter.no_chapters")
+
+        book = epub.EpubBook()
+        book.set_identifier(f"tinix-{datetime.now().strftime('%Y%m%d%H%M%S')}")
+        book.set_title(title)
+        book.set_language('vi')
+        book.add_author(author)
+
+        # CSS cơ bản cho typography
+        css_content = """
+body { font-family: serif; line-height: 1.8; margin: 2em; color: #333; }
+h1 { text-align: center; font-size: 2em; margin-bottom: 1em; }
+h2 { text-align: center; font-size: 1.4em; margin: 2em 0 1em; border-bottom: 1px solid #ccc; }
+p { text-indent: 2em; margin: 0.5em 0; text-align: justify; }
+"""
+        nav_css = epub.EpubItem(uid="style_nav", file_name="style/nav.css", media_type="text/css", content=css_content)
+        book.add_item(nav_css)
+
+        epub_chapters = []
+        toc = []
+        spine = ['nav']
+
+        for i, ch in enumerate(chapters):
+            ch_title = ch.get('title', f"Chương {i + 1}")
+            ch_content = ch.get('content', '')
+            # Chuyển đổi nội dung thành HTML đơn giản
+            paragraphs_html = ''.join(f'<p>{p.strip()}</p>' for p in ch_content.split('\n') if p.strip())
+            html_body = f'<h2>{ch_title}</h2>\n{paragraphs_html}'
+
+            epub_ch = epub.EpubHtml(
+                title=ch_title,
+                file_name=f'chapter_{i + 1:03d}.xhtml',
+                lang='vi'
+            )
+            epub_ch.content = f'<html><head><link rel="stylesheet" type="text/css" href="style/nav.css"/></head><body>{html_body}</body></html>'
+            epub_ch.add_item(nav_css)
+            book.add_item(epub_ch)
+            epub_chapters.append(epub_ch)
+            toc.append(epub.Link(f'chapter_{i + 1:03d}.xhtml', ch_title, f'chapter_{i + 1}'))
+            spine.append(epub_ch)
+
+        book.toc = toc
+        book.add_item(epub.EpubNcx())
+        book.add_item(epub.EpubNav())
+        book.spine = spine
+
+        # Ghi file
+        safe_title = _sanitize_filename(title)
+        filename = f"{safe_title}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.epub"
+        filepath = os.path.join(EXPORT_DIR, filename)
+        epub.write_epub(filepath, book, {})
+
+        logger.info(f"EPUB export success: {filename}")
+        return filepath, t("exporter.export_success", filename=filename)
+
+    except Exception as e:
+        logger.error(f"EPUB export failed: {e}")
+        return None, t("exporter.export_failed", error=str(e))
+
+
+def export_to_pdf(novel_text: str, title: str) -> Tuple[Optional[str], str]:
+    """
+    Xuất ra định dạng PDF (yêu cầu weasyprint)
+
+    Args:
+        novel_text: Văn bản tiểu thuyết (định dạng Markdown)
+        title: Tiêu đề tiểu thuyết
+
+    Returns:
+        (Đường dẫn tệp, thông tin trạng thái)
+    """
+    try:
+        import weasyprint
+    except ImportError:
+        return None, t("exporter.missing_weasyprint")
+
+    try:
+        import markdown
+    except ImportError:
+        return None, t("exporter.missing_markdown")
+
+    try:
+        if not novel_text.strip():
+            return None, t("exporter.no_content")
+
+        html_content = markdown.markdown(novel_text)
+
+        full_html = f"""<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>{title}</title>
+    <style>
+        @page {{
+            margin: 2cm;
+            @bottom-center {{ content: counter(page); font-size: 10pt; }}
+        }}
+        body {{
+            font-family: 'Arial', 'Times New Roman', serif;
+            font-size: 12pt;
+            line-height: 1.8;
+            color: #333;
+        }}
+        h1 {{ text-align: center; font-size: 24pt; margin-bottom: 1em; }}
+        h2 {{
+            text-align: center;
+            font-size: 14pt;
+            margin-top: 2em;
+            page-break-before: always;
+        }}
+        h2:first-of-type {{ page-break-before: avoid; }}
+        p {{ text-indent: 2em; margin: 0.5em 0; text-align: justify; }}
+    </style>
+</head>
+<body>
+    <h1>{title}</h1>
+    <p style="text-align:center;color:#999;font-size:10pt;">{t('exporter.generated_at', datetime=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))}</p>
+    <hr>
+    {html_content}
+</body>
+</html>"""
+
+        safe_title = _sanitize_filename(title)
+        filename = f"{safe_title}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+        filepath = os.path.join(EXPORT_DIR, filename)
+        weasyprint.HTML(string=full_html).write_pdf(filepath)
+
+        logger.info(f"PDF export success: {filename}")
+        return filepath, t("exporter.export_success", filename=filename)
+
+    except Exception as e:
+        logger.error(f"PDF export failed: {e}")
+        return None, t("exporter.export_failed", error=str(e))
+
+
 def list_export_files() -> list:
     """Liệt kê tất cả các tập tin xuất"""
     try:

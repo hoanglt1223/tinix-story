@@ -429,6 +429,101 @@ def parse_novel_file(file_path: str) -> Tuple[List[str], str]:
         return [], t("file_parser.unsupported_format")
 
 
+def parse_epub_structured(file_path: str) -> Tuple[List[ChapterInfo], Dict, str]:
+    """
+    Phân tích EPUB theo cấu trúc chương từ TOC
+
+    Returns:
+        (Danh sách ChapterInfo, metadata dict, thông tin trạng thái)
+    """
+    try:
+        from ebooklib import epub
+        from bs4 import BeautifulSoup
+    except ImportError:
+        return [], {}, t("file_parser.missing_ebooklib")
+
+    try:
+        file_size = os.path.getsize(file_path)
+        if file_size > MAX_FILE_SIZE:
+            return [], {}, t("file_parser.file_too_large", size=f"{file_size / 1024 / 1024:.1f}")
+
+        book = epub.read_epub(file_path)
+
+        # Trích xuất metadata
+        metadata: Dict = {}
+        try:
+            title_meta = book.get_metadata('DC', 'title')
+            metadata['title'] = title_meta[0][0] if title_meta else ""
+        except Exception:
+            metadata['title'] = ""
+        try:
+            creator_meta = book.get_metadata('DC', 'creator')
+            metadata['author'] = creator_meta[0][0] if creator_meta else ""
+        except Exception:
+            metadata['author'] = ""
+
+        # Xây dựng map href -> item từ spine
+        spine_ids = [item_id for item_id, _ in book.spine]
+        spine_items: Dict[str, object] = {}
+        for item in book.get_items():
+            if item.get_id() in spine_ids:
+                spine_items[item.get_name()] = item
+
+        def _extract_text(item) -> str:
+            """Trích xuất text từ item EPUB"""
+            soup = BeautifulSoup(item.get_content(), 'html.parser')
+            return soup.get_text(separator="\n").strip()
+
+        def _resolve_toc_entries(toc_entries) -> List[Tuple[str, str]]:
+            """Duyệt TOC đệ quy -> [(title, href)]"""
+            result = []
+            for entry in toc_entries:
+                if hasattr(entry, 'href'):
+                    result.append((entry.title, entry.href.split('#')[0]))
+                elif isinstance(entry, tuple) and len(entry) == 2:
+                    section, children = entry
+                    if hasattr(section, 'href'):
+                        result.append((section.title, section.href.split('#')[0]))
+                    result.extend(_resolve_toc_entries(children))
+            return result
+
+        toc_entries = _resolve_toc_entries(book.toc)
+        chapters: List[ChapterInfo] = []
+
+        if toc_entries:
+            # Dùng TOC để lấy chapters có tiêu đề
+            seen_hrefs = set()
+            for ch_num, (title, href) in enumerate(toc_entries, start=1):
+                if href in seen_hrefs:
+                    continue
+                seen_hrefs.add(href)
+                item = spine_items.get(href)
+                if item is None:
+                    # Thử match theo tên file
+                    for name, it in spine_items.items():
+                        if name.endswith(href) or href.endswith(name):
+                            item = it
+                            break
+                content = _extract_text(item) if item else ""
+                if content or title:
+                    chapters.append(ChapterInfo(num=ch_num, title=title or f"Chương {ch_num}", content=content))
+        else:
+            # Fallback: chia theo spine items
+            for ch_num, item in enumerate(book.get_items(), start=1):
+                if item.get_type() == epub.ITEM_DOCUMENT:
+                    content = _extract_text(item)
+                    if content:
+                        chapters.append(ChapterInfo(num=ch_num, title=f"Chương {ch_num}", content=content))
+
+        logger.info(f"EPUB structured parse done: {len(chapters)} chapters")
+        status = t("file_parser.epub_structured_complete", count=len(chapters), title=metadata.get('title', ''))
+        return chapters, metadata, status
+
+    except Exception as e:
+        logger.error(f"EPUB structured parse failed: {e}")
+        return [], {}, t("file_parser.read_failed", error=str(e))
+
+
 def _split_paragraphs(text: str, min_length: int = MIN_PARAGRAPH_LENGTH) -> List[str]:
     """
     Chia văn bản thành các đoạn văn
