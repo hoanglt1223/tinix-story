@@ -60,9 +60,7 @@ def create_main_ui():
         with open(css_path, 'r', encoding='utf-8') as f:
             custom_css = f.read()
 
-    with gr.Blocks(title=t("app.title")) as app:
-        # Inject custom CSS
-        gr.HTML(f"<style>{custom_css}</style>", visible=False)
+    with gr.Blocks(title=t("app.title"), theme=gr.themes.Soft(), css=custom_css) as app:
 
         # Header
         gr.Markdown(f"""
