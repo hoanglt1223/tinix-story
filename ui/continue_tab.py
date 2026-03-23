@@ -118,7 +118,7 @@ def build_continue_tab():
                     continue_status = gr.Textbox(label=t("continue_tab.gen_status"), interactive=False, lines=15)
                 with gr.Column(scale=2):
                     continue_chapter_selector = gr.Dropdown(label=t("continue_tab.chapter_list_label"), choices=[], interactive=True, allow_custom_value=True)
-                    continue_content_display = gr.Textbox(label=t("continue_tab.chapter_content_label"), lines=15, interactive=False)
+                    continue_content_display = gr.Textbox(label=t("continue_tab.chapter_content_label"), lines=15, interactive=False, elem_classes=["novel-text"])
 
         # ── Trình xử lý: Phân tích tiểu thuyết ──
         def on_analyze_novel(file_obj):

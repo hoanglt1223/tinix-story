@@ -9,44 +9,35 @@ logger = logging.getLogger(__name__)
 
 
 def _build_dashboard_html(stats):
-    """Tạo HTML bảng dashboard dự án"""
+    """Tạo HTML dashboard dự án dạng card"""
     if not stats:
-        return f"<p class='text-muted'>{t('dashboard.no_projects')}</p>"
+        return f"<p class='text-muted' style='text-align:center;padding:2rem'>{t('dashboard.no_projects')}</p>"
 
-    rows_html = ""
+    cards_html = ""
     for p in stats:
         total = p.get("total_chapters", 0) or 0
         completed = p.get("completed_chapters", 0) or 0
         words = p.get("total_words", 0) or 0
         pct = int(completed / total * 100) if total > 0 else 0
         updated = (p.get("updated_at") or "")[:10]
-        rows_html += f"""
-        <tr>
-          <td style='padding:6px 10px'>{p.get('title','')}</td>
-          <td style='padding:6px 10px'>{p.get('genre','')}</td>
-          <td style='padding:6px 10px'>
-            <div class='progress-bar'>
-              <div class='progress-fill' style='width:{pct}%'></div>
-            </div>
-            <span style='margin-left:6px;font-size:0.85em'>{completed}/{total} ({pct}%)</span>
-          </td>
-          <td style='padding:6px 10px'>{words:,}</td>
-          <td style='padding:6px 10px'>{updated}</td>
-        </tr>"""
+        genre = p.get("genre", "")
+        title = p.get("title", "")
 
-    return f"""
-    <table class='dashboard-table'>
-      <thead>
-        <tr class='dashboard-header'>
-          <th style='padding:8px 10px;text-align:left'>{t('dashboard.col_title')}</th>
-          <th style='padding:8px 10px;text-align:left'>{t('dashboard.col_genre')}</th>
-          <th style='padding:8px 10px;text-align:left'>{t('dashboard.col_progress')}</th>
-          <th style='padding:8px 10px;text-align:left'>{t('dashboard.col_words')}</th>
-          <th style='padding:8px 10px;text-align:left'>{t('dashboard.col_updated')}</th>
-        </tr>
-      </thead>
-      <tbody>{rows_html}</tbody>
-    </table>"""
+        cards_html += f"""
+        <div class='project-card'>
+          <div class='project-card-title'>{title}</div>
+          <span class='project-card-genre'>{genre}</span>
+          <div class='project-card-progress'>
+            <div class='project-card-progress-fill' style='width:{pct}%'></div>
+          </div>
+          <div class='project-card-stats'>
+            <span class='project-card-stat'>{t('dashboard.col_progress')}: <strong>{completed}/{total}</strong> ({pct}%)</span>
+            <span class='project-card-stat'>{t('dashboard.col_words')}: <strong>{words:,}</strong></span>
+            <span class='project-card-stat'>{updated}</span>
+          </div>
+        </div>"""
+
+    return f"<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px'>{cards_html}</div>"
 
 
 def build_projects_tab():
@@ -108,7 +99,8 @@ def build_projects_tab():
                 )
             editor_textbox = gr.Textbox(
                 label=t("projects.editor_content"),
-                interactive=True, lines=20, max_lines=40
+                interactive=True, lines=20, max_lines=40,
+                elem_classes=["novel-text"]
             )
             with gr.Row():
                 editor_word_count = gr.Number(label=t("projects.word_count"), value=0, interactive=False, scale=1)
