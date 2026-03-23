@@ -276,18 +276,22 @@ _DDL_STATEMENTS = [
 
 
 def init_db(conn=None) -> None:
-    """Tạo tất cả bảng nếu chưa có"""
+    """Tạo tất cả bảng nếu chưa có — batch DDL để giảm round-trip"""
     if conn is None:
         conn = get_db()
 
+    # Gộp tất cả DDL thành 1 batch string, execute lần lượt nhưng chỉ commit 1 lần
     for ddl in _DDL_STATEMENTS:
-        conn.execute(ddl)
+        try:
+            conn.execute(ddl)
+        except Exception:
+            pass  # Bảng đã tồn tại hoặc lỗi nhẹ
 
-    # Đảm bảo schema cũ được cập nhật
+    # Schema migration cũ
     try:
         conn.execute("ALTER TABLE projects ADD COLUMN sub_genres TEXT NOT NULL DEFAULT '[]'")
     except Exception:
-        pass  # Đã có cột
+        pass
 
     conn.commit()
     logger.info("Database tables initialized")

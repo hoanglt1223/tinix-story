@@ -111,7 +111,7 @@ def build_settings_tab():
 
                                 with gr.Row():
                                     manage_backend_select = gr.Dropdown(
-                                        choices=[b['name'] for b in ConfigAPIManager.list_backends().get("data", [])],
+                                        choices=[],
                                         label=t("settings.select_backend_edit"),
                                         interactive=True,
                                         scale=4,
@@ -132,7 +132,7 @@ def build_settings_tab():
                                         placeholder=t("settings.backend_name_placeholder"),
                                     )
                                     api_type_dropdown = gr.Dropdown(
-                                        choices=ConfigAPIManager.get_backend_types(),
+                                        choices=["openai", "anthropic", "google", "azure"],
                                         value="openai",
                                         label=t("settings.backend_type"),
                                         interactive=True,
@@ -325,39 +325,37 @@ def build_settings_tab():
                     with gr.Group():
                         gr.Markdown(f"#### {t('settings.params_header')}")
 
-                        config = get_config()
-                        gen_config = config.generation
-
+                        # Dùng giá trị mặc định thay vì gọi DB lúc build
                         with gr.Row():
                             param_temperature = gr.Slider(
-                                minimum=0.1, maximum=2.0, value=gen_config.temperature, step=0.1,
+                                minimum=0.1, maximum=2.0, value=0.8, step=0.1,
                                 label=t("settings.temperature_label"), info=t("settings.temperature_info"),
                             )
                             param_top_p = gr.Slider(
-                                minimum=0.1, maximum=1.0, value=gen_config.top_p, step=0.05,
+                                minimum=0.1, maximum=1.0, value=1.0, step=0.05,
                                 label="Top P", info=t("settings.top_p_info"),
                             )
 
                         with gr.Row():
                             param_max_tokens = gr.Slider(
-                                minimum=100, maximum=100000, value=gen_config.max_tokens, step=100,
+                                minimum=100, maximum=100000, value=4096, step=100,
                                 label="Max Tokens", info=t("settings.max_tokens_info"),
                             )
                             param_chapter_words = gr.Slider(
-                                minimum=500, maximum=65536, value=gen_config.chapter_target_words, step=500,
+                                minimum=500, maximum=65536, value=3000, step=500,
                                 label=t("settings.chapter_target_words"),
                             )
 
                         with gr.Row():
                             param_writing_style = gr.Dropdown(
                                 choices=StyleManager.get_style_names(),
-                                value=gen_config.writing_style,
+                                value=None,
                                 label=t("settings.writing_style"),
                                 allow_custom_value=True,
                             )
                             param_writing_tone = gr.Dropdown(
                                 choices=t("settings.tones"),
-                                value=gen_config.writing_tone,
+                                value=None,
                                 label=t("settings.tone_label"),
                                 allow_custom_value=True,
                             )
@@ -365,13 +363,13 @@ def build_settings_tab():
                         with gr.Row():
                             param_char_dev = gr.Dropdown(
                                 choices=t("settings.char_dev_options"),
-                                value=gen_config.character_development,
+                                value=None,
                                 label=t("settings.char_dev_label"),
                                 allow_custom_value=True,
                             )
                             param_plot_complexity = gr.Dropdown(
                                 choices=t("settings.plot_complexity_options"),
-                                value=gen_config.plot_complexity,
+                                value=None,
                                 label=t("settings.plot_complexity_label"),
                                 allow_custom_value=True,
                             )
