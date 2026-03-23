@@ -3,6 +3,7 @@ from locales.i18n import t
 from services.project_manager import ProjectManager, list_project_titles
 from services.consistency_checker import ConsistencyChecker
 from utils.exporter import export_to_docx, export_to_txt, export_to_markdown, export_to_html, export_to_epub, export_to_pdf
+from html import escape as _esc
 import logging
 
 logger = logging.getLogger(__name__)
@@ -19,9 +20,9 @@ def _build_dashboard_html(stats):
         completed = p.get("completed_chapters", 0) or 0
         words = p.get("total_words", 0) or 0
         pct = int(completed / total * 100) if total > 0 else 0
-        updated = (p.get("updated_at") or "")[:10]
-        genre = p.get("genre", "")
-        title = p.get("title", "")
+        updated = _esc((p.get("updated_at") or "")[:10])
+        genre = _esc(p.get("genre", ""))
+        title = _esc(p.get("title", ""))
 
         cards_html += f"""
         <div class='project-card'>
