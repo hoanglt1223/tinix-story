@@ -121,7 +121,7 @@ def build_create_tab():
         with gr.Accordion(f"📋 {t('outline_editor.accordion_label')}", open=False):
             with gr.Row():
                 outline_editor_project_sel = gr.Dropdown(
-                    choices=list_project_titles(),
+                    choices=[],
                     label=t("outline_editor.select_project"),
                     interactive=True, scale=3
                 )

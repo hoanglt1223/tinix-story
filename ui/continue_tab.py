@@ -19,9 +19,8 @@ def build_continue_tab():
         with gr.Accordion("📂 1. Quản lý dự án", open=True):
             with gr.Row():
                 with gr.Column(scale=4):
-                    project_choices = list_project_titles()
                     continue_project_selector = gr.Dropdown(
-                        choices=project_choices,
+                        choices=[],
                         label=t("continue_tab.select_project"),
                         interactive=True
                     )
@@ -227,11 +226,10 @@ def build_continue_tab():
         with gr.Accordion(t("multi_model.accordion_title"), open=False):
             mm_enable = gr.Checkbox(label=t("multi_model.enable_label"), value=False)
             from core.config import get_config as _get_config
-            _backend_names = [b.name for b in _get_config().get_enabled_backends()]
             mm_backends = gr.CheckboxGroup(
-                choices=_backend_names,
+                choices=[],
                 label=t("multi_model.backends_label"),
-                value=_backend_names[:2] if len(_backend_names) >= 2 else _backend_names
+                value=[]
             )
             mm_compare_btn = gr.Button(t("multi_model.compare_btn"), variant="secondary")
             with gr.Row():

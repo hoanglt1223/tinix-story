@@ -10,9 +10,8 @@ def build_export_tab():
     with gr.Tab(t("tabs.export")):
         gr.Markdown(f"### {t('export.header')}")
 
-        export_project_choices = list_project_titles()
         export_project_selector = gr.Dropdown(
-            choices=export_project_choices,
+            choices=[],
             label=t("projects.select_project"),
             interactive=True
         )

@@ -60,7 +60,7 @@ def build_projects_tab():
         # === Delete Section ===
         gr.Markdown(f"#### {t('projects.delete_header')}")
         delete_project_selector = gr.Dropdown(
-            choices=list_project_titles(),
+            choices=[],
             label=t("projects.delete_select_project"),
             interactive=True
         )
@@ -97,7 +97,7 @@ def build_projects_tab():
         with gr.Accordion(f"✏️ {t('projects.editor_header')}", open=False):
             with gr.Row():
                 editor_project_selector = gr.Dropdown(
-                    choices=list_project_titles(),
+                    choices=[],
                     label=t("projects.select_project"),
                     interactive=True, scale=2
                 )
@@ -372,7 +372,7 @@ def build_projects_tab():
         # === Consistency Check Section ===
         with gr.Accordion(f"🔍 {t('consistency.accordion_label')}", open=False):
             consistency_project_selector = gr.Dropdown(
-                choices=list_project_titles(),
+                choices=[],
                 label=t("consistency.select_project"),
                 interactive=True
             )
@@ -417,7 +417,7 @@ def build_projects_tab():
             gr.Markdown(t("archive.description"))
             with gr.Row():
                 archive_project_selector = gr.Dropdown(
-                    choices=list_project_titles(),
+                    choices=[],
                     label=t("archive.select_project"),
                     interactive=True, scale=3
                 )
