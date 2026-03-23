@@ -16,7 +16,7 @@ def build_continue_tab():
     with gr.Tab(t("tabs.continue_tab")):
         gr.Markdown(f"### {t('continue_tab.header')}")
 
-        with gr.Accordion("📂 1. Quản lý dự án", open=True):
+        with gr.Accordion(t("continue_tab.project_management"), open=True):
             with gr.Row():
                 with gr.Column(scale=4):
                     continue_project_selector = gr.Dropdown(
@@ -32,7 +32,7 @@ def build_continue_tab():
                 batch_summary_btn = gr.Button(t("continue_tab.batch_summary_btn"), variant="secondary", scale=1)
             batch_summary_progress = gr.Textbox(label=t("continue_tab.summary_progress"), interactive=False, lines=8)
 
-        with gr.Accordion("⚙️ 2. Thông tin & Cài đặt", open=False):
+        with gr.Accordion(t("continue_tab.info_settings"), open=False):
             with gr.Row():
                 with gr.Column(scale=1):
                     continue_project_info = gr.Markdown(t("continue_tab.no_project_loaded"))
@@ -40,16 +40,16 @@ def build_continue_tab():
                     continue_outline_display = gr.Textbox(
                         label=t("continue_tab.outline_label"),
                         interactive=False, lines=6, max_lines=12,
-                        value="Chưa tải dự án..."
+                        value=t("continue_tab.no_project_loaded_value")
                     )
 
             with gr.Row():
                 with gr.Column(scale=1):
-                    memory_type = gr.Radio(label="Cách nhớ ngữ cảnh", choices=["Toàn văn", "Tóm tắt"], value="Toàn văn")
+                    memory_type = gr.Radio(label=t("continue_tab.memory_type_label"), choices=[t("continue_tab.memory_full_text"), t("continue_tab.memory_summary")], value=t("continue_tab.memory_full_text"))
                 with gr.Column(scale=1):
-                    memory_chapters = gr.Number(label="Số chương ghi nhớ", value=3, minimum=1, maximum=20, step=1)
+                    memory_chapters = gr.Number(label=t("continue_tab.memory_chapters_label"), value=3, minimum=1, maximum=20, step=1)
                 with gr.Column(scale=1):
-                    use_reflection_checkbox = gr.Checkbox(label="Bật chế độ Tự kiểm duyệt (Self-Reflection)", value=False, info="AI tự đọc lại và sửa lỗi nháp. Tốn gấp đôi thời gian & Token.")
+                    use_reflection_checkbox = gr.Checkbox(label=t("continue_tab.reflection_label"), value=False, info=t("continue_tab.reflection_info"))
 
             with gr.Row():
                 continue_target_words = gr.Number(label=t("rewrite.target_words"), value=3000, minimum=100, maximum=50000, step=100)
@@ -57,7 +57,7 @@ def build_continue_tab():
                 style_choices = StyleManager.get_style_names()
                 continue_style_dropdown = gr.Dropdown(
                     choices=style_choices,
-                    label="Phong cách viết",
+                    label=t("continue_tab.writing_style_label"),
                     value=style_choices[0] if style_choices else None,
                     interactive=True
                 )
@@ -100,25 +100,25 @@ def build_continue_tab():
                 char_delete_btn = gr.Button(t("character.delete_btn"), variant="stop", scale=1)
             char_status = gr.Textbox(label=t("character.status_label"), interactive=False, lines=1)
 
-        with gr.Accordion("🚀 3. Sáng tác tiếp", open=False):
+        with gr.Accordion(t("continue_tab.compose_section"), open=False):
             with gr.Row():
-                continue_chapter_num = gr.Number(label="Chương số", value=1, minimum=1, scale=1)
-                continue_chapter_title = gr.Textbox(label="Tiêu đề chương", placeholder="Nhập tiêu đề chương...", scale=2)
+                continue_chapter_num = gr.Number(label=t("continue_tab.chapter_num_label"), value=1, minimum=1, scale=1)
+                continue_chapter_title = gr.Textbox(label=t("continue_tab.chapter_title_label"), placeholder=t("continue_tab.chapter_title_placeholder"), scale=2)
             continue_chapter_desc = gr.Textbox(
-                label="Nội dung/Dàn ý chương này",
-                lines=3, placeholder="Nhập mô tả nội dung chương..."
+                label=t("continue_tab.chapter_desc_label"),
+                lines=3, placeholder=t("continue_tab.chapter_desc_placeholder")
             )
             with gr.Row():
                 continue_generate_btn = gr.Button(t("continue_tab.continue_gen_btn"), variant="primary", size="lg", scale=1)
-                continue_auto_btn = gr.Button("Tự động viết nốt các chương còn lại", variant="primary", size="lg", scale=2)
-                continue_stop_btn = gr.Button("Dừng tự động", variant="stop", size="lg", scale=1)
+                continue_auto_btn = gr.Button(t("continue_tab.auto_generate_btn"), variant="primary", size="lg", scale=2)
+                continue_stop_btn = gr.Button(t("continue_tab.stop_auto_btn"), variant="stop", size="lg", scale=1)
             
             with gr.Row():
                 with gr.Column(scale=1):
                     continue_status = gr.Textbox(label=t("continue_tab.gen_status"), interactive=False, lines=15)
                 with gr.Column(scale=2):
-                    continue_chapter_selector = gr.Dropdown(label="Danh sách chương đã tạo", choices=[], interactive=True, allow_custom_value=True)
-                    continue_content_display = gr.Textbox(label="Nội dung chương", lines=15, interactive=False)
+                    continue_chapter_selector = gr.Dropdown(label=t("continue_tab.chapter_list_label"), choices=[], interactive=True, allow_custom_value=True)
+                    continue_content_display = gr.Textbox(label=t("continue_tab.chapter_content_label"), lines=15, interactive=False)
 
         # ── Trình xử lý: Phân tích tiểu thuyết ──
         def on_analyze_novel(file_obj):
@@ -240,6 +240,10 @@ def build_continue_tab():
             mm_save_btn = gr.Button(t("multi_model.save_btn"), variant="primary")
             mm_status = gr.Textbox(label="", interactive=False)
 
+        # Rewrite + Polish text tools
+        from ui.text_tools import build_text_tools_section
+        build_text_tools_section()
+
         def on_mm_compare(project_title, ch_num, ch_title, ch_desc, custom_prompt,
                           mem_type, mem_chaps, selected_style, enabled, selected_backends):
             if not enabled:
@@ -257,7 +261,7 @@ def build_continue_tab():
             all_past = [ch for ch in project.chapters if ch.num < int(ch_num) and getattr(ch, 'content', None)]
             mem_ch = int(mem_chaps) if mem_chaps else 3
             past_chapters = all_past[-mem_ch:] if len(all_past) > mem_ch else all_past
-            prev_content = "\n\n".join(c.content for c in past_chapters)[-4000:] if mem_type == "Toàn văn" else (all_past[-1].content[-1500:] if all_past else "")
+            prev_content = "\n\n".join(c.content for c in past_chapters)[-4000:] if mem_type == t("continue_tab.memory_full_text") else (all_past[-1].content[-1500:] if all_past else "")
 
             results = gen.generate_chapter_multi(
                 backend_names=selected_backends,
@@ -340,15 +344,15 @@ def build_continue_tab():
                 info, next_ch, outline_text, chapter_choices = on_continue_project_select(current_title)
                 return gr.update(choices=titles, value=current_title), info, next_ch, outline_text, gr.update(choices=chapter_choices, value=chapter_choices[-1] if chapter_choices else None)
             else:
-                return gr.update(choices=titles, value=None), t("continue_tab.no_project_loaded"), 1, "Chưa tải dự án...", gr.update(choices=[], value=None)
+                return gr.update(choices=titles, value=None), t("continue_tab.no_project_loaded"), 1, t("continue_tab.no_project_loaded_value"), gr.update(choices=[], value=None)
 
         def on_continue_project_select(project_title):
             if not project_title:
-                return t("continue_tab.no_project_loaded"), 1, "Chưa tải dự án...", []
+                return t("continue_tab.no_project_loaded"), 1, t("continue_tab.no_project_loaded_value"), []
             try:
                 project_data = ProjectManager.get_project_by_title(project_title)
                 if not project_data:
-                    return f"❌ {t('continue_tab.project_not_found')}", 1, "Chưa tải dự án...", []
+                    return f"❌ {t('continue_tab.project_not_found')}", 1, t("continue_tab.no_project_loaded_value"), []
 
                 project_id = project_data.get("id")
                 project, msg = ProjectManager.load_project(project_id)
@@ -398,9 +402,9 @@ def build_continue_tab():
                     chapter_choices = [f"Chương {ch.num}: {ch.title}" for ch in project.chapters if getattr(ch, 'content', None)]
 
                     return info, next_ch, outline_text, chapter_choices
-                return f"❌ {msg}", 1, "Chưa tải dự án...", []
+                return f"❌ {msg}", 1, t("continue_tab.no_project_loaded_value"), []
             except Exception as e:
-                return f"❌ {str(e)}", 1, "Lỗi khi tải dàn ý", []
+                return f"❌ {str(e)}", 1, t("continue_tab.no_project_loaded_value"), []
 
         def on_continue_chapter_select(chapter_title):
             if not chapter_title or not app_state.current_project:
@@ -434,7 +438,7 @@ def build_continue_tab():
             prev_content = ""
             context_summary = ""
 
-            if mem_type == "Toàn văn":
+            if mem_type == t("continue_tab.memory_full_text"):
                 prev_texts = [c.content for c in past_chapters]
                 prev_content = "\n\n".join(prev_texts)
                 prev_content = prev_content[-4000:]
@@ -555,7 +559,7 @@ def build_continue_tab():
                 prev_content = ""
                 context_summary = ""
 
-                if mem_type == "Toàn văn":
+                if mem_type == t("continue_tab.memory_full_text"):
                     prev_texts = [c.content for c in past_chapters]
                     prev_content = "\n\n".join(prev_texts)
                     prev_content = prev_content[-4000:]

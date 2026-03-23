@@ -1,201 +1,192 @@
-/* Modern & Aesthetic UI for Tinix Story (tinix-novels) */
+/* TiniX Story — Warm Book Theme */
 
-/* Import Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@300;400;500;600;700&family=Noto+Serif:wght@400;500;600;700&display=swap');
 
-/* ===== Light Mode (default) ===== */
 :root {
-    --primary-color: #6366f1;
-    --primary-hover: #4f46e5;
-    --secondary-color: #64748b;
-    --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-    --card-bg: rgba(255, 255, 255, 0.85);
-    --text-primary: #1e293b;
-    --text-secondary: #64748b;
-    --border-color: rgba(0, 0, 0, 0.1);
-    --input-bg: rgba(255, 255, 255, 0.9);
-    --border-radius-lg: 16px;
-    --border-radius-md: 12px;
-    --shadow-soft: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
-    --shadow-hover: 0 20px 30px -10px rgba(0, 0, 0, 0.1);
-    --focus-ring: rgba(99, 102, 241, 0.1);
-}
-
-/* ===== Dark Mode ===== */
-.dark-mode {
-    --primary-color: #818cf8;
-    --primary-hover: #6366f1;
-    --secondary-color: #94a3b8;
-    --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    --card-bg: rgba(30, 41, 59, 0.85);
-    --text-primary: #e2e8f0;
-    --text-secondary: #94a3b8;
-    --border-color: rgba(255, 255, 255, 0.1);
-    --input-bg: rgba(15, 23, 42, 0.9);
-    --shadow-soft: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
-    --shadow-hover: 0 20px 30px -10px rgba(0, 0, 0, 0.4);
-    --focus-ring: rgba(129, 140, 248, 0.2);
+  --color-bg: #FEFCF9;
+  --color-surface: #FFFFFF;
+  --color-primary: #D4A574;
+  --color-primary-hover: #C4956A;
+  --color-accent: #8B6914;
+  --color-text: #2D2A24;
+  --color-text-muted: #8A8478;
+  --color-border: #E8E0D4;
+  --color-input-bg: #FAF8F5;
+  --color-danger: #C44D3D;
+  --color-success: #5B8A72;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-heading: 'Outfit', sans-serif;
+  --font-reading: 'Noto Serif', Georgia, serif;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 1px 3px rgba(45,42,36,0.06);
+  --shadow-md: 0 4px 12px rgba(45,42,36,0.08);
 }
 
 body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
-    background: var(--bg-gradient) !important;
-    color: var(--text-primary) !important;
-    min-height: 100vh;
+  font-family: var(--font-body) !important;
+  background: var(--color-bg) !important;
+  color: var(--color-text) !important;
+  min-height: 100vh;
 }
 
 h1,
 h2,
 h3 {
-    font-family: 'Outfit', sans-serif !important;
-    font-weight: 700 !important;
-    letter-spacing: -0.02em !important;
-    color: var(--text-primary) !important;
+  font-family: var(--font-heading) !important;
+  font-weight: 700 !important;
+  color: var(--color-text) !important;
 }
 
-/* Header Styling */
+/* App Header */
 .app-header {
-    text-align: center;
-    margin-bottom: 2rem;
-    padding: 2rem 0;
+  text-align: center;
+  padding: var(--space-xl) 0 var(--space-lg);
 }
 
-/* Containers & Cards */
+.app-title {
+  font-size: 2.2rem;
+  color: var(--color-accent);
+  margin: 0;
+}
+
+.app-subtitle {
+  color: var(--color-text-muted);
+  font-size: 1rem;
+  margin-top: var(--space-xs);
+}
+
+/* App Footer */
+.app-footer {
+  text-align: center;
+  padding: var(--space-lg) 0;
+  margin-top: var(--space-2xl);
+  border-top: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+}
+
+.footer-credit {
+  font-size: 0.85rem;
+}
+
+/* Containers */
 .gradio-container {
-    max-width: 1200px !important;
+  max-width: 1200px !important;
 }
 
 .gr-group,
 .gr-box,
 .gr-form {
-    background-color: var(--card-bg) !important;
-    backdrop-filter: blur(12px) !important;
-    border: 1px solid var(--border-color) !important;
-    border-radius: var(--border-radius-lg) !important;
-    box-shadow: var(--shadow-soft) !important;
-    transition: all 0.3s ease !important;
-    padding: 1.5rem !important;
-    margin-bottom: 1.5rem !important;
+  background: var(--color-surface) !important;
+  border: 1px solid var(--color-border) !important;
+  box-shadow: var(--shadow-sm) !important;
+  border-radius: var(--radius-lg) !important;
+  padding: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
 }
 
-.gr-group:hover {
-    box-shadow: var(--shadow-hover) !important;
-    transform: translateY(-2px);
-}
-
-/* Tab Styling */
+/* Tabs */
 .tabs {
-    background: transparent !important;
-    border: none !important;
-    margin-bottom: 2rem !important;
+  background: transparent !important;
+  border: none !important;
+  margin-bottom: 2rem !important;
 }
 
 .tab-nav {
-    display: flex !important;
-    justify-content: center !important;
-    border-bottom: 1px solid var(--border-color) !important;
-    margin-bottom: 1.5rem !important;
+  display: flex !important;
+  justify-content: center !important;
+  border-bottom: 1px solid var(--color-border) !important;
+  margin-bottom: 1.5rem !important;
 }
 
 .tabitem {
-    padding: 2rem !important;
-    background: transparent !important;
+  padding: 2rem !important;
+  background: transparent !important;
 }
 
 button.selected {
-    color: var(--primary-color) !important;
-    border-bottom: 2px solid var(--primary-color) !important;
+  color: var(--color-accent) !important;
+  border-bottom: 2px solid var(--color-accent) !important;
 }
 
-/* Button Improvements */
+/* Primary Buttons */
 button.gr-button-primary {
-    background: linear-gradient(135deg, #6366f1, #4f46e5) !important;
-    border: none !important;
-    border-radius: var(--border-radius-md) !important;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3) !important;
-    font-weight: 600 !important;
-    transition: all 0.2s ease !important;
-    color: white !important;
+  background: var(--color-primary) !important;
+  border: none !important;
+  border-radius: var(--radius-md) !important;
+  font-weight: 600 !important;
+  color: white !important;
 }
 
 button.gr-button-primary:hover {
-    transform: translateY(-2px) !important;
-    box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4) !important;
-    filter: brightness(1.1) !important;
+  background: var(--color-primary-hover) !important;
 }
 
+/* Stop Buttons */
 button.gr-button-stop {
-    background: linear-gradient(135deg, #f43f5e, #e11d48) !important;
-    border-radius: var(--border-radius-md) !important;
-    box-shadow: 0 4px 12px rgba(244, 63, 94, 0.3) !important;
-    font-weight: 600 !important;
-    transition: all 0.2s ease !important;
-    color: white !important;
+  background: var(--color-danger) !important;
+  border-radius: var(--radius-md) !important;
+  font-weight: 600 !important;
+  color: white !important;
 }
 
-/* Inputs & Textboxes */
+/* Inputs */
 textarea,
 input[type="text"],
 input[type="number"] {
-    border-radius: var(--border-radius-md) !important;
-    border: 1px solid var(--border-color) !important;
-    padding: 0.75rem !important;
-    background-color: var(--input-bg) !important;
-    color: var(--text-primary) !important;
-    transition: border-color 0.2s ease !important;
+  border-radius: var(--radius-md) !important;
+  border: 1px solid var(--color-border) !important;
+  padding: 0.75rem !important;
+  background-color: var(--color-input-bg) !important;
+  color: var(--color-text) !important;
 }
 
 textarea:focus,
 input[type="text"]:focus {
-    border-color: var(--primary-color) !important;
-    box-shadow: 0 0 0 3px var(--focus-ring) !important;
+  border-color: var(--color-primary) !important;
 }
 
-/* Dark mode specific: labels, markdown, dropdowns */
-.dark-mode label,
-.dark-mode .gr-markdown,
-.dark-mode .gr-textbox label,
-.dark-mode p,
-.dark-mode span {
-    color: var(--text-primary) !important;
+/* Novel reading text */
+.novel-text {
+  font-family: var(--font-reading);
+  line-height: 1.8;
+  font-size: 1.05rem;
 }
 
-.dark-mode select,
-.dark-mode .gr-dropdown {
-    background-color: var(--input-bg) !important;
-    color: var(--text-primary) !important;
-    border-color: var(--border-color) !important;
+/* Dashboard Table */
+.dashboard-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9em;
 }
 
-/* Micro-animations */
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.dashboard-header {
+  background: var(--color-text);
+  color: var(--color-bg);
 }
 
-.gradio-container {
-    animation: fadeIn 0.8s ease-out;
+.progress-bar {
+  background: var(--color-border);
+  border-radius: 4px;
+  height: 12px;
+  width: 100px;
+  display: inline-block;
+  vertical-align: middle;
 }
 
-/* Custom classes we'll add to app.py */
-.main-title h1 {
-    font-size: 3rem !important;
-    background: linear-gradient(to right, #6366f1, #ec4899);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 0.25rem !important;
+.progress-fill {
+  background: var(--color-success);
+  height: 100%;
+  border-radius: 4px;
 }
 
-.subtitle p {
-    color: var(--secondary-color) !important;
-    font-size: 1.1rem !important;
-    opacity: 0.8;
+.text-muted {
+  color: var(--color-text-muted);
 }
